@@ -73,7 +73,7 @@ function mostrarToast(mensaje) {
     
     setTimeout(() => {
         toast.classList.remove('mostrar');
-    }, 2500); // Se oculta tras 2.5 segundos
+    }, 2500); 
 }
 
 function formatoFechaES(fechaStr) {
@@ -201,11 +201,10 @@ function renderizarMovimientos() {
     listaGastosTabla.innerHTML = ''; 
     const mesSeleccionado = inputSelectorMes.value;
     
-    // Aplicar animación suave a los elementos principales al cambiar el mes
     const elementosAAnimar = [tituloMesActual, document.querySelector('.contenedor-totales'), listaGastosTabla];
     elementosAAnimar.forEach(el => {
         el.classList.remove('animacion-suave');
-        void el.offsetWidth; // Truco visual para reiniciar la animación
+        void el.offsetWidth; 
         el.classList.add('animacion-suave');
     });
 
@@ -293,6 +292,54 @@ formulario.addEventListener('submit', function(evento) {
     resetearFormularioYModal();
 });
 
+// --- EXPORTAR COPIA DE SEGURIDAD (JSON) ---
+document.getElementById('btn-exportar-json').addEventListener('click', () => {
+    if(movimientos.length === 0) return alert('No hay datos que exportar.');
+    const datosJSON = JSON.stringify(movimientos, null, 2);
+    const blob = new Blob([datosJSON], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.setAttribute('download', `backup_gastos_${obtenerFechaHoy()}.json`);
+    document.body.appendChild(enlace);
+    enlace.click();
+    document.body.removeChild(enlace);
+    mostrarToast('💾 Copia de seguridad guardada');
+});
+
+// --- IMPORTAR COPIA DE SEGURIDAD (JSON) ---
+const btnImportarJson = document.getElementById('btn-importar-json');
+const inputArchivoJson = document.getElementById('input-archivo-json');
+
+btnImportarJson.addEventListener('click', () => {
+    inputArchivoJson.click();
+});
+
+inputArchivoJson.addEventListener('change', (evento) => {
+    const archivo = evento.target.files[0];
+    if (!archivo) return;
+
+    const lector = new FileReader();
+    lector.onload = function(e) {
+        try {
+            const datosImportados = JSON.parse(e.target.result);
+            if (Array.isArray(datosImportados)) {
+                movimientos = datosImportados;
+                guardarGastosEnMemoria(movimientos);
+                renderizarMovimientos();
+                mostrarToast('📂 Copia restaurada con éxito');
+            } else {
+                alert('El archivo seleccionado no es válido.');
+            }
+        } catch (error) {
+            alert('Error al leer el archivo JSON.');
+        }
+        inputArchivoJson.value = ''; // Limpiar input
+    };
+    lector.readAsText(archivo);
+});
+
+// --- EXPORTAR EXCEL (CSV) ---
 document.getElementById('btn-exportar').addEventListener('click', () => {
     if(movimientos.length === 0) return alert('No hay movimientos que exportar.');
     let csv = '\uFEFFFecha,Tipo,Categoría,Concepto,Cantidad (€)\n';
