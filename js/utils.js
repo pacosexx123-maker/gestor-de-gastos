@@ -26,7 +26,7 @@ export function filtrarMovimientosPorMes(lista, mesAnio) {
     });
 }
 
-// Gastos personales (filtrados por mes)
+// Gastos personales (filtrados por mes exacto)
 export function calcularGastos(lista, mesAnio) {
     const listaFiltrada = filtrarMovimientosPorMes(lista, mesAnio);
     return listaFiltrada
@@ -34,7 +34,7 @@ export function calcularGastos(lista, mesAnio) {
         .reduce((acumulado, mov) => acumulado + parseFloat(mov.cantidad || 0), 0);
 }
 
-// Nómina (filtrada por mes)
+// Nómina (filtrada por mes exacto)
 export function calcularIngresosNomina(lista, mesAnio) {
     const listaFiltrada = filtrarMovimientosPorMes(lista, mesAnio);
     return listaFiltrada
@@ -42,19 +42,21 @@ export function calcularIngresosNomina(lista, mesAnio) {
         .reduce((acumulado, mov) => acumulado + parseFloat(mov.cantidad || 0), 0);
 }
 
-// Gasto Hogar (GLOBAL / PERSISTENTE - No se borra al cambiar de mes)
-export function calcularGastoHogar(lista) {
+// Gasto Hogar (Acumulado HASTA el mes seleccionado inclusive)
+export function calcularGastoHogar(lista, mesAnio) {
     let gastos = 0;
     let bizum = 0;
-    
     lista.forEach(mov => {
-        if (mov.tipo === 'gasto' && mov.categoria === 'Hogar') gastos += parseFloat(mov.cantidad || 0);
-        if (mov.tipo === 'ingreso' && mov.categoria === 'Bizum Hogar') bizum += parseFloat(mov.cantidad || 0);
+        const mesMovimiento = (mov.fecha || '').substring(0, 7);
+        if (mesMovimiento <= mesAnio) {
+            if (mov.tipo === 'gasto' && mov.categoria === 'Hogar') gastos += parseFloat(mov.cantidad || 0);
+            if (mov.tipo === 'ingreso' && mov.categoria === 'Bizum Hogar') bizum += parseFloat(mov.cantidad || 0);
+        }
     });
     return gastos - bizum;
 }
 
-// Desglose personal (filtrado por mes)
+// Desglose personal (filtrado por mes exacto)
 export function calcularDesglosePersonal(lista, mesAnio) {
     const listaFiltrada = filtrarMovimientosPorMes(lista, mesAnio);
     const totales = {};
@@ -67,19 +69,20 @@ export function calcularDesglosePersonal(lista, mesAnio) {
     return totales;
 }
 
-// Desglose Hogar (GLOBAL / PERSISTENTE)
-export function calcularDesgloseHogar(lista) {
+// Desglose Hogar (Acumulado HASTA el mes seleccionado inclusive)
+export function calcularDesgloseHogar(lista, mesAnio) {
     let gastoHogar = 0;
     let bizumHogar = 0;
-
     lista.forEach(mov => {
-        if (mov.tipo === 'gasto' && mov.categoria === 'Hogar') gastoHogar += parseFloat(mov.cantidad || 0);
-        if (mov.tipo === 'ingreso' && mov.categoria === 'Bizum Hogar') bizumHogar += parseFloat(mov.cantidad || 0);
+        const mesMovimiento = (mov.fecha || '').substring(0, 7);
+        if (mesMovimiento <= mesAnio) {
+            if (mov.tipo === 'gasto' && mov.categoria === 'Hogar') gastoHogar += parseFloat(mov.cantidad || 0);
+            if (mov.tipo === 'ingreso' && mov.categoria === 'Bizum Hogar') bizumHogar += parseFloat(mov.cantidad || 0);
+        }
     });
 
     const desglose = {};
     if (gastoHogar > 0) desglose['Gastos acumulados'] = gastoHogar;
     if (bizumHogar > 0) desglose['Devoluciones (Bizum)'] = -bizumHogar; 
-    
     return desglose;
 }
