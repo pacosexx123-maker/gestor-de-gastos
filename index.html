@@ -11,7 +11,13 @@
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
-    <button id="btn-exportar" class="btn-exportar">📥 Exportar Excel</button>
+    <!-- Botones Superiores (Excel y Copias de Seguridad) -->
+    <div class="botones-superiores">
+        <button id="btn-exportar" class="btn-exportar" title="Exportar a Excel (CSV)">📥 Excel</button>
+        <button id="btn-exportar-json" class="btn-exportar" title="Guardar copia de seguridad">💾 Exportar</button>
+        <button id="btn-importar-json" class="btn-exportar" title="Restaurar copia de seguridad">📂 Importar</button>
+        <input type="file" id="input-archivo-json" accept=".json" style="display: none;">
+    </div>
     
     <div class="app-contenedor">
         
