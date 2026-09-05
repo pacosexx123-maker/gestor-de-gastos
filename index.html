@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="icon" type="image/png" href="icono.png">
+    <link rel="apple-touch-icon" href="icono.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gestor de Gastos Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <button id="btn-exportar" class="btn-exportar">📥 Exportar Excel</button>
+    
+    <div class="app-contenedor">
+        
+        <!-- Selector de Mes Minimalista en Grande -->
+        <div class="selector-mes-contenedor" id="zona-swipe-mes">
+            <input type="month" id="selector-mes-activo" class="input-mes-oculto">
+            <h1 id="titulo-mes-actual" class="titulo-mes">Cargando mes...</h1>
+        </div>
+
+        <!-- Paneles Superiores (Totales) -->
+        <div class="contenedor-totales">
+            <div class="tarjeta-total bg-ingreso">
+                <h3>Ingresos (Nómina)</h3>
+                <p><span id="ingresos-totales">0.00</span> €</p>
+            </div>
+            <!-- Hechos clickables para abrir los desgloses -->
+            <div class="tarjeta-total bg-personal" id="btn-ver-personal" title="Ver desglose personal">
+                <h3>Gasto Personal (Ver)</h3>
+                <p><span id="gasto-total">0.00</span> €</p>
+            </div>
+            <div class="tarjeta-total bg-hogar" id="btn-ver-hogar" title="Ver desglose hogar">
+                <h3>Gasto Hogar (Ver)</h3>
+                <p><span id="gasto-hogar">0.00</span> €</p>
+            </div>
+        </div>
+
+        <!-- Tabla de Historial (Desplegable) -->
+        <div class="tarjeta">
+            <div class="cabecera-tarjeta" id="cabecera-historial" style="cursor: pointer; justify-content: space-between; margin-bottom: 0;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="icono-tarjeta gris">📋</span>
+                    <b>Historial de Movimientos</b>
+                </div>
+                <span id="icono-flecha" style="transition: transform 0.3s; font-size: 14px; color: var(--texto-secundario);">▼</span>
+            </div>
+            <div id="contenedor-acordeon" class="acordeon-contenido">
+                <div class="acordeon-interior">
+                    <div class="tabla-contenedor" style="margin-top: 15px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Concepto</th>
+                                    <th>Categoría</th>
+                                    <th>Cantidad</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-gastos"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón Flotante -->
+    <button id="btn-abrir-formulario" class="btn-flotante">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </button>
+
+    <!-- Modal de Desglose (Pop-up para Personal y Hogar) -->
+    <div id="modal-detalle" class="modal-overlay oculto">
+        <div class="modal-contenido modal-ancho">
+            <div class="cabecera-formulario">
+                <b id="titulo-modal-detalle">Detalle de Gastos</b>
+                <button id="btn-cerrar-detalle" class="btn-cerrar">✕</button>
+            </div>
+            <div id="resumen-categorias" class="resumen-categorias"></div>
+            <div class="tabla-contenedor">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Concepto</th>
+                            <th>Cantidad</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-detalle"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Formulario -->
+    <div id="contenedor-formulario" class="modal-overlay oculto">
+        <div class="modal-contenido">
+            <div class="cabecera-formulario">
+                <b>Nuevo Movimiento</b>
+                <button id="btn-cerrar-formulario" class="btn-cerrar">✕</button>
+            </div>
+            <form id="formulario">
+                <div class="grupo-input">
+                    <label>Tipo de movimiento</label>
+                    <select id="tipo-movimiento">
+                        <option value="gasto">Gasto</option>
+                        <option value="ingreso">Ingreso</option>
+                    </select>
+                </div>
+                <div class="grupo-input">
+                    <label>Categoría</label>
+                    <select id="categoria"></select>
+                </div>
+                <div class="grupo-input">
+                    <label>Concepto</label>
+                    <input type="text" id="concepto" placeholder="Ej. Compra supermercado" required>
+                </div>
+                <div class="dos-columnas">
+                    <div class="grupo-input">
+                        <label>Cantidad (€)</label>
+                        <input type="number" id="cantidad" placeholder="0.00" step="0.01" required>
+                    </div>
+                    <div class="grupo-input">
+                        <label>Fecha</label>
+                        <input type="date" id="fecha" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-guardar">Guardar Movimiento</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notificación Toast -->
+    <div id="toast-notificacion" class="toast">Mensaje</div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
