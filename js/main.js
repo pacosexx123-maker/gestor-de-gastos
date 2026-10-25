@@ -51,6 +51,9 @@ function cambiarMesActivo(incremento) {
     renderizarMovimientos();
 }
 
+document.getElementById('btn-mes-anterior').addEventListener('click', () => cambiarMesActivo(-1));
+document.getElementById('btn-mes-siguiente').addEventListener('click', () => cambiarMesActivo(1));
+
 // ACORDEÓN HISTORIAL
 const cabeceraHistorial = document.getElementById('cabecera-historial');
 const contenedorAcordeon = document.getElementById('contenedor-acordeon');
@@ -169,9 +172,9 @@ function abrirModalDetalle(tipo) {
                 <td><span class="pildora">${mov.categoria || 'Otros'}</span> <br> <small>${mov.concepto || 'Sin concepto'}</small></td>
                 <td class="${claseColor}">${signo} ${parseFloat(mov.cantidad || 0).toFixed(2)} €</td>
                 <td>
-                    <div style="display: flex; gap: 4px; justify-content: center;">
-                        <button class="btn-editar btn-editar-detalle" data-indice="${indiceReal}">✏️</button>
-                        <button class="btn-eliminar btn-eliminar-detalle" data-indice="${indiceReal}">✕</button>
+                    <div class="acciones-fila">
+                        <button class="btn-editar btn-editar-detalle" data-indice="${indiceReal}" title="Editar"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+                        <button class="btn-eliminar btn-eliminar-detalle" data-indice="${indiceReal}" title="Eliminar"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
                     </div>
                 </td>
             </tr>`;
@@ -183,7 +186,7 @@ function abrirModalDetalle(tipo) {
             guardarGastosEnMemoria(movimientos);
             renderizarMovimientos();
             abrirModalDetalle(tipo); 
-            mostrarToast('🗑️ Movimiento eliminado');
+            mostrarToast('Movimiento eliminado');
         });
     });
 
@@ -222,13 +225,13 @@ function renderizarMovimientos() {
         const fila = document.createElement('tr');
         fila.innerHTML = `
             <td>${fechaSinAnio}</td>
-            <td>${mov.concepto || 'Sin concepto'}</td>
+            <td>${mov.concepto || 'Sin concepto'}<br><span class="pildora categoria-movil">${mov.categoria || 'Otros'}</span></td>
             <td><span class="pildora">${mov.categoria || 'Otros'}</span></td>
             <td class="${claseColor}">${signo} ${parseFloat(mov.cantidad || 0).toFixed(2)} €</td>
             <td>
-                <div style="display: flex; gap: 4px; justify-content: center;">
-                    <button class="btn-editar btn-editar-main" data-indice="${indiceReal}">✏️</button>
-                    <button class="btn-eliminar btn-eliminar-main" data-indice="${indiceReal}">✕</button>
+                <div class="acciones-fila">
+                    <button class="btn-editar btn-editar-main" data-indice="${indiceReal}" title="Editar"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+                    <button class="btn-eliminar btn-eliminar-main" data-indice="${indiceReal}" title="Eliminar"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
                 </div>
             </td>
         `;
@@ -240,7 +243,7 @@ function renderizarMovimientos() {
             movimientos.splice(this.getAttribute('data-indice'), 1);
             guardarGastosEnMemoria(movimientos);
             renderizarMovimientos();
-            mostrarToast('🗑️ Movimiento eliminado');
+            mostrarToast('Movimiento eliminado');
         });
     });
 
@@ -280,10 +283,10 @@ formulario.addEventListener('submit', function(evento) {
     
     if (indiceEditando !== null) { 
         movimientos[indiceEditando] = datosMovimiento; 
-        mostrarToast('✅ Movimiento actualizado correctamente');
+        mostrarToast('Movimiento actualizado');
     } else { 
         movimientos.push(datosMovimiento); 
-        mostrarToast('✅ Movimiento añadido correctamente');
+        mostrarToast('Movimiento añadido');
     }
 
     guardarGastosEnMemoria(movimientos);
@@ -304,7 +307,7 @@ document.getElementById('btn-exportar-json').addEventListener('click', () => {
     document.body.appendChild(enlace);
     enlace.click();
     document.body.removeChild(enlace);
-    mostrarToast('💾 Copia de seguridad guardada');
+    mostrarToast('Copia de seguridad guardada');
 });
 
 // --- IMPORTAR COPIA DE SEGURIDAD (JSON) ---
@@ -327,7 +330,7 @@ inputArchivoJson.addEventListener('change', (evento) => {
                 movimientos = datosImportados;
                 guardarGastosEnMemoria(movimientos);
                 renderizarMovimientos();
-                mostrarToast('📂 Copia restaurada con éxito');
+                mostrarToast('Copia restaurada con éxito');
             } else {
                 alert('El archivo seleccionado no es válido.');
             }
