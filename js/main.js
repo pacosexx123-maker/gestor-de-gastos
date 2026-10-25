@@ -2,7 +2,7 @@ import {
     obtenerFechaHoy, obtenerMesActual, cargarGastosDesdeMemoria, guardarGastosEnMemoria, 
     filtrarMovimientosPorMes, calcularGastos, calcularIngresosNomina, calcularGastoHogar, 
     calcularDesglosePersonal, calcularDesgloseHogar 
-} from './utils.js';
+} from './utils.js?v=2';
 
 const formulario = document.getElementById('formulario');
 const listaGastosTabla = document.getElementById('lista-gastos');
