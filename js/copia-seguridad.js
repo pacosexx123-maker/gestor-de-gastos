@@ -2,8 +2,8 @@
 // propio navegador), aviso periódico y envío con el menú de compartir del móvil.
 // Los datos solo salen del dispositivo cifrados y por la app que elija el usuario.
 
-import { obtenerFechaHoy, descargarArchivo } from './utils.js?v=11';
-import { bytesABase64, base64ABytes } from './excel.js?v=11';
+import { obtenerFechaHoy, descargarArchivo } from './utils.js?v=14';
+import { bytesABase64, base64ABytes } from './excel.js?v=14';
 
 const FORMATO_CIFRADO = 'gestor-gastos-cifrado';
 const ITERACIONES = 310000;
@@ -273,4 +273,29 @@ export function iniciarCopiaSeguridad(funcionesAyuda) {
     modalCopia.addEventListener('click', (e) => { if (e.target === modalCopia) cerrarModalCopia(); });
 
     setTimeout(comprobarRecordatorio, 1200);
+}
+
+// --- PARA LA PANTALLA DE AJUSTES ---
+
+export function hayContrasenaGuardada() {
+    return leer('contrasenaCopia') !== null;
+}
+
+// null la olvida; un texto la guarda para las próximas copias
+export function guardarContrasenaCopia(contrasena) {
+    escribir('contrasenaCopia', contrasena);
+}
+
+export function obtenerDiasRecordatorio() {
+    return diasRecordatorio();
+}
+
+export function fijarDiasRecordatorio(dias) {
+    escribir('diasRecordatorio', String(dias));
+}
+
+export function describirUltimaCopia() {
+    const dias = diasDesdeUltimaCopia();
+    if (dias === null) return 'Aún no has hecho ninguna copia';
+    return `Última copia: ${dias === 0 ? 'hoy' : dias === 1 ? 'ayer' : `hace ${dias} días`}`;
 }

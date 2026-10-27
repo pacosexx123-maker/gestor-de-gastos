@@ -8,34 +8,26 @@
     <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0b0f17" media="(prefers-color-scheme: dark)">
     <title>Gestor de Gastos</title>
+    <script>
+        try {
+            var tema = localStorage.getItem('tema');
+            if (tema === 'claro') document.documentElement.setAttribute('data-theme', 'light');
+            else if (tema === 'oscuro') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=11">
+    <link rel="stylesheet" href="css/style.css?v=14">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
-    <!-- Barra superior: marca + acciones (Excel y copias de seguridad) -->
+    <!-- Barra superior: marca -->
     <header class="barra-superior">
         <div class="barra-interior">
             <div class="marca">
                 <img src="icono.png" alt="" class="marca-logo">
                 <span class="marca-nombre">Gestor de Gastos</span>
-            </div>
-            <div class="botones-superiores">
-                <button id="btn-exportar" class="btn-exportar" title="Exportar a Excel">
-                    <svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
-                    <span>Excel</span>
-                </button>
-                <button id="btn-exportar-json" class="btn-exportar" title="Copia de seguridad cifrada">
-                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    <span>Exportar</span>
-                </button>
-                <button id="btn-importar-json" class="btn-exportar" title="Restaurar copia de seguridad o importar órdenes del bróker (CSV / Excel)">
-                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    <span>Importar</span>
-                </button>
-                <input type="file" id="input-archivo-json" accept=".json,.csv,.xlsx,.xls,.txt,application/json,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display: none;">
             </div>
         </div>
     </header>
@@ -185,11 +177,28 @@
                     </span>
                     <div>
                         <b>Distribución por activo</b>
-                        <small>Importe invertido en cada fondo o acción</small>
+                        <small>Importe invertido en cada fondo, acción o cartera</small>
                     </div>
+                </div>
+                <div class="selector-grafico" role="group" aria-label="Tipo de gráfico">
+                    <button type="button" data-modo="lista" title="Lista" aria-label="Lista">
+                        <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="17" y2="17"/></svg>
+                    </button>
+                    <button type="button" data-modo="tarta" title="Tarta" aria-label="Gráfico de tarta">
+                        <svg viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                    </button>
+                    <button type="button" data-modo="barras" title="Barras" aria-label="Gráfico de barras">
+                        <svg viewBox="0 0 24 24"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="18" y1="20" x2="18" y2="10"/></svg>
+                    </button>
                 </div>
             </div>
             <div id="lista-activos" class="lista-activos"></div>
+            <div class="pie-tarjeta">
+                <button type="button" id="btn-gestionar-carteras" class="btn-secundario">
+                    <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    Mis carteras
+                </button>
+            </div>
         </section>
 
         <!-- Operaciones -->
@@ -265,23 +274,159 @@
             <div id="lista-archivos" class="lista-archivos"></div>
         </section>
       </div>
+
+      <!-- ================= SECCIÓN AJUSTES ================= -->
+      <div id="seccion-ajustes" class="seccion oculto">
+
+        <div class="cabecera-seccion">
+            <span class="mes-etiqueta">Preferencias</span>
+            <h1 class="titulo-mes">Ajustes</h1>
+        </div>
+
+        <!-- Apariencia -->
+        <section class="tarjeta tarjeta-ajustes">
+            <h2 class="titulo-ajustes">Apariencia</h2>
+            <div class="ajuste-fila">
+                <div class="ajuste-texto">
+                    <b>Tema</b>
+                    <small>"Sistema" sigue el modo claro u oscuro de tu móvil</small>
+                </div>
+                <div class="control-segmentado" data-grupo="tema" role="group" aria-label="Tema">
+                    <button type="button" data-valor="sistema">Sistema</button>
+                    <button type="button" data-valor="claro">Claro</button>
+                    <button type="button" data-valor="oscuro">Oscuro</button>
+                </div>
+            </div>
+            <div class="ajuste-fila">
+                <div class="ajuste-texto">
+                    <b>Pantalla al abrir la app</b>
+                    <small>Con qué pestaña empieza la app</small>
+                </div>
+                <div class="control-segmentado" data-grupo="inicio" role="group" aria-label="Pantalla al abrir la app">
+                    <button type="button" data-valor="ultima">Última</button>
+                    <button type="button" data-valor="gastos">Gastos</button>
+                    <button type="button" data-valor="inversiones">Inversiones</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Copia de seguridad -->
+        <section class="tarjeta tarjeta-ajustes">
+            <h2 class="titulo-ajustes">Copia de seguridad</h2>
+            <div class="ajuste-fila">
+                <div class="ajuste-texto">
+                    <b id="ajuste-ultima-copia">Aún no has hecho ninguna copia</b>
+                    <small>Cifrada con tu contraseña y enviada a donde elijas</small>
+                </div>
+                <button type="button" id="btn-copia-ahora" class="btn-secundario">Hacer copia ahora</button>
+            </div>
+            <div class="ajuste-fila">
+                <div class="ajuste-texto">
+                    <b>Recordarme hacer una copia</b>
+                    <small>El aviso aparece al abrir la app</small>
+                </div>
+                <select id="ajuste-frecuencia" class="ajuste-select">
+                    <option value="3">Cada 3 días</option>
+                    <option value="7">Cada semana</option>
+                    <option value="14">Cada 2 semanas</option>
+                    <option value="30">Cada mes</option>
+                    <option value="0">Nunca</option>
+                </select>
+            </div>
+            <div class="ajuste-fila ajuste-columna">
+                <div class="ajuste-texto">
+                    <b>Contraseña de la copia</b>
+                    <small id="ajuste-estado-contrasena">No guardada</small>
+                </div>
+                <div class="dos-columnas">
+                    <div class="grupo-input">
+                        <label for="ajuste-contrasena-nueva">Nueva contraseña</label>
+                        <input type="password" id="ajuste-contrasena-nueva" autocomplete="new-password" minlength="6" placeholder="Mínimo 6 caracteres">
+                    </div>
+                    <div class="grupo-input">
+                        <label for="ajuste-contrasena-repetir">Repetir contraseña</label>
+                        <input type="password" id="ajuste-contrasena-repetir" autocomplete="new-password" minlength="6">
+                    </div>
+                </div>
+                <p class="texto-ayuda">Las copias nuevas se cifrarán con esta contraseña. Las que ya enviaste siguen abriéndose con la contraseña con la que se crearon.</p>
+                <div class="botones-ajuste">
+                    <button type="button" id="btn-cambiar-contrasena" class="btn-secundario">Guardar contraseña</button>
+                    <button type="button" id="btn-olvidar-contrasena" class="btn-secundario btn-peligro-suave">Olvidar contraseña guardada</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Datos -->
+        <section class="tarjeta tarjeta-ajustes">
+            <h2 class="titulo-ajustes">Datos</h2>
+            <div class="ajuste-fila">
+                <div class="ajuste-texto">
+                    <b id="ajuste-resumen-datos">0 movimientos</b>
+                    <small id="ajuste-espacio">Ocupan 0 B en este dispositivo</small>
+                </div>
+            </div>
+            <div class="ajuste-fila">
+                <div class="ajuste-texto">
+                    <b>Borrar todos los datos</b>
+                    <small>Elimina gastos, inversiones, carteras y archivos de este dispositivo. No se puede deshacer.</small>
+                </div>
+                <button type="button" id="btn-borrar-todo" class="btn-secundario btn-peligro">Borrar todo</button>
+            </div>
+        </section>
+
+        <!-- Privacidad -->
+        <section class="tarjeta tarjeta-ajustes">
+            <h2 class="titulo-ajustes">Privacidad</h2>
+            <div class="ajuste-fila">
+                <div class="ajuste-texto">
+                    <b>Tus datos no salen de este dispositivo</b>
+                    <small>Se guardan solo en la memoria del navegador. La app no tiene servidor ni envía nada a internet: las copias de seguridad solo salen cifradas y por la app que tú elijas.</small>
+                </div>
+            </div>
+        </section>
+      </div>
     </main>
 
     <!-- Barra de navegación inferior -->
     <nav class="barra-navegacion">
-        <button type="button" class="nav-item activo" data-seccion="gastos">
+        <button type="button" class="nav-item activo" data-seccion="gastos" aria-label="Gastos" title="Gastos">
             <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
             <span>Gastos</span>
         </button>
-        <button type="button" class="nav-item" data-seccion="inversiones">
+        <button type="button" class="nav-item" data-seccion="inversiones" aria-label="Inversiones" title="Inversiones">
             <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             <span>Inversiones</span>
         </button>
-        <button type="button" class="nav-item" data-seccion="archivos">
+        <button type="button" class="nav-item" data-seccion="archivos" aria-label="Archivos" title="Archivos">
             <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             <span>Archivos</span>
         </button>
+        <button type="button" class="nav-item" data-seccion="ajustes" aria-label="Ajustes" title="Ajustes">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>Ajustes</span>
+        </button>
     </nav>
+
+    <!-- Botón de datos (lado opuesto al +): exportar, copia de seguridad e importar -->
+    <button id="btn-menu-datos" class="btn-flotante btn-datos" title="Exportar, copia e importar" aria-haspopup="true" aria-expanded="false" aria-controls="menu-datos">
+        <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        <span>Datos</span>
+    </button>
+    <div id="menu-datos" class="menu-datos oculto" role="menu" aria-label="Exportar, copia e importar">
+        <button type="button" id="btn-exportar" class="menu-opcion" role="menuitem">
+            <span class="menu-icono"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
+            <span class="menu-texto"><b>Exportar a Excel</b><small id="texto-exportar-seccion">Gastos (.xlsx)</small></span>
+        </button>
+        <button type="button" id="btn-exportar-json" class="menu-opcion" role="menuitem">
+            <span class="menu-icono"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+            <span class="menu-texto"><b>Copia de seguridad</b><small>Cifrada, para guardarla o enviártela</small></span>
+        </button>
+        <button type="button" id="btn-importar-json" class="menu-opcion" role="menuitem">
+            <span class="menu-icono"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
+            <span class="menu-texto"><b>Importar</b><small>Copia de seguridad u órdenes del bróker</small></span>
+        </button>
+    </div>
+    <input type="file" id="input-archivo-json" class="input-archivo-oculto" accept=".json,.csv,.xlsx,.xls,.txt,application/json,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
 
     <!-- Botón flotante (abre el formulario de la sección activa) -->
     <button id="btn-abrir-formulario" class="btn-flotante" title="Nuevo movimiento">
@@ -386,6 +531,18 @@
                         </select>
                     </div>
                 </div>
+                <div class="grupo-input">
+                    <label>¿Cómo quieres añadirla?</label>
+                    <div class="control-segmentado control-ancho" id="modo-importe-inversion" role="group" aria-label="Forma de añadir la inversión">
+                        <button type="button" data-valor="detalle">Títulos y precio</button>
+                        <button type="button" data-valor="total">Solo importe</button>
+                    </div>
+                </div>
+                <div id="bloque-solo-importe" class="grupo-input oculto">
+                    <label for="inv-importe-solo">Importe total pagado (€)</label>
+                    <input type="number" id="inv-importe-solo" placeholder="0.00" step="any" min="0" inputmode="decimal">
+                </div>
+                <div id="bloque-detalle-importe">
                 <div class="dos-columnas">
                     <div class="grupo-input">
                         <label for="inv-cantidad">Títulos / participaciones</label>
@@ -407,6 +564,7 @@
                     </div>
                 </div>
                 <p class="texto-ayuda texto-ayuda-form">Rellena la comisión o el importe final: el otro se calcula solo.</p>
+                </div>
                 <div class="grupo-input">
                     <label for="inv-fecha">Fecha</label>
                     <input type="date" id="inv-fecha" required>
@@ -514,6 +672,35 @@
         </div>
     </div>
 
+    <!-- Modal "Mis carteras": agrupar activos (p. ej. una cartera automatizada) -->
+    <div id="modal-carteras" class="modal-overlay oculto">
+        <div class="modal-contenido">
+            <div class="cabecera-modal">
+                <b id="titulo-modal-carteras">Mis carteras</b>
+                <button id="btn-cerrar-carteras" class="btn-cerrar" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div id="carteras-vista-lista">
+                <p class="texto-ayuda">Agrupa los fondos de una cartera (por ejemplo, una cartera automatizada) para verlos como uno solo en la distribución. Las nuevas aportaciones de esos fondos entrarán solas en la cartera.</p>
+                <div id="lista-carteras" class="lista-carteras"></div>
+                <button type="button" id="btn-nueva-cartera" class="btn-guardar">+ Nueva cartera</button>
+            </div>
+            <div id="carteras-vista-edicion" class="oculto">
+                <div class="grupo-input">
+                    <label for="cartera-nombre">Nombre de la cartera</label>
+                    <input type="text" id="cartera-nombre" placeholder="Ej. Cartera Metal" autocomplete="off">
+                </div>
+                <label class="etiqueta-lista">Activos que forman la cartera</label>
+                <div id="cartera-activos" class="cartera-activos"></div>
+                <div class="botones-modal">
+                    <button type="button" id="btn-cancelar-cartera" class="btn-secundario">Volver</button>
+                    <button type="button" id="btn-guardar-cartera" class="btn-guardar">Guardar cartera</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Notificación -->
     <div id="toast-notificacion" class="toast">Mensaje</div>
 
@@ -539,6 +726,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=11"></script>
+    <script type="module" src="js/main.js?v=14"></script>
 </body>
 </html>

@@ -1,10 +1,14 @@
 import {
     obtenerFechaHoy, cargarInversionesDesdeMemoria, guardarInversionesEnMemoria,
-    calcularTotalInversion, calcularResumenPorActivo, claveActivo
-} from './utils.js?v=11';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha } from './excel.js?v=11';
+    calcularTotalInversion, calcularResumenPorActivo, claveActivo, tieneDetalleTitulos
+} from './utils.js?v=14';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha } from './excel.js?v=14';
+import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=14';
+import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros } from './graficos.js?v=14';
 
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+const ICONO_DESPLEGAR = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
+const SERIES_DISPONIBLES = 8;
 const ICONO_ELIMINAR = '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
 
 const modalInversion = document.getElementById('modal-inversion');
@@ -27,9 +31,13 @@ const errorComision = document.getElementById('inv-error-comision');
 const resumenOperaciones = document.getElementById('resumen-operaciones');
 const filtroNombre = document.getElementById('filtro-inv-nombre');
 const filtroTipo = document.getElementById('filtro-inv-tipo');
+const inputImporteSolo = document.getElementById('inv-importe-solo');
+const bloqueDetalle = document.getElementById('bloque-detalle-importe');
+const bloqueSoloImporte = document.getElementById('bloque-solo-importe');
 
 let inversiones = cargarInversionesDesdeMemoria();
 let indiceEditando = null;
+let modoImporte = 'detalle'; // 'detalle' (títulos y precio) o 'total' (solo lo pagado)
 let ultimoEditado = 'comision'; // 'comision' o 'final': el que escribió el usuario manda sobre el otro
 let ayudas = {}; // abrirModal, cerrarModal, mostrarToast, formatoFechaES (vienen de main.js)
 
@@ -109,6 +117,22 @@ export function buscarActivo({ isin, nombre }) {
     return null;
 }
 
+function fijarModoImporte(modo) {
+    modoImporte = modo;
+    const soloTotal = modo === 'total';
+    bloqueSoloImporte.classList.toggle('oculto', !soloTotal);
+    bloqueDetalle.classList.toggle('oculto', soloTotal);
+    inputImporteSolo.required = soloTotal;
+    inputCantidad.required = !soloTotal;
+    inputPrecio.required = !soloTotal;
+    document.querySelectorAll('#modo-importe-inversion button').forEach(btn => {
+        const activo = btn.getAttribute('data-valor') === modo;
+        btn.classList.toggle('activo', activo);
+        btn.setAttribute('aria-pressed', activo);
+    });
+    recalcularImportes();
+}
+
 function redondear(numero) {
     return Math.round(numero * 100) / 100;
 }
@@ -116,6 +140,13 @@ function redondear(numero) {
 // Comisión e importe final se calculan uno a partir del otro:
 //   importe final = títulos × precio + comisión   <->   comisión = importe final − títulos × precio
 function recalcularImportes(origen) {
+    if (modoImporte === 'total') {
+        const total = parseFloat(inputImporteSolo.value) || 0;
+        errorComision.classList.add('oculto');
+        displayTotalFormulario.textContent = total.toFixed(2);
+        displayDesglose.textContent = 'Sin detalle de títulos ni precio';
+        return { valor: 0, comision: 0, comisionNegativa: false };
+    }
     if (origen === 'comision' || origen === 'final') ultimoEditado = origen;
     const cantidad = parseFloat(inputCantidad.value);
     const precio = parseFloat(inputPrecio.value);
@@ -151,6 +182,11 @@ export function abrirFormularioInversion(indice = null) {
         inputCantidad.value = inv.cantidad || '';
         inputPrecio.value = inv.precio || '';
         inputComision.value = parseFloat(inv.comision || 0) > 0 ? inv.comision : '';
+        if (!tieneDetalleTitulos(inv)) {
+            inputCantidad.value = '';
+            inputPrecio.value = '';
+            inputImporteSolo.value = calcularTotalInversion(inv) || '';
+        }
         inputFecha.value = inv.fecha || obtenerFechaHoy();
         document.getElementById('titulo-form-inversion').textContent = 'Editar Inversión';
         document.getElementById('btn-guardar-inversion').textContent = 'Actualizar Inversión';
@@ -160,7 +196,7 @@ export function abrirFormularioInversion(indice = null) {
         document.getElementById('btn-guardar-inversion').textContent = 'Guardar Inversión';
     }
 
-    recalcularImportes();
+    fijarModoImporte(indice !== null && !tieneDetalleTitulos(inversiones[indice]) ? 'total' : 'detalle');
     ayudas.abrirModal(modalInversion);
 }
 
@@ -187,40 +223,136 @@ export function renderizarInversiones() {
     document.getElementById('inv-ultima-fecha').textContent = ultima ? ayudas.formatoFechaES(ultima.inv.fecha) : '—';
     document.getElementById('inv-ultima-activo').textContent = ultima ? ultima.inv.nombre : 'Sin aportaciones';
 
-    // Distribución por activo
-    listaActivos.innerHTML = '';
-    if (resumen.length === 0) {
-        listaActivos.innerHTML = '<p class="estado-vacio">Aún no has añadido ninguna inversión. Pulsa + para empezar.</p>';
-    }
-    resumen.forEach(activo => {
-        const porcentaje = totalInvertido > 0 ? (activo.total / totalInvertido) * 100 : 0;
-        // Las órdenes importadas sin nombre usan el ISIN como nombre: se muestra "Sin nombre" para completarlo
-        const sinNombre = !activo.nombre || activo.nombre === activo.isin;
-        listaActivos.innerHTML += `
-            <div class="activo-fila">
-                <div class="activo-info">
-                    <b class="activo-nombre ${sinNombre ? 'sin-nombre' : ''}">${sinNombre ? 'Sin nombre' : escaparHTML(activo.nombre)}</b>
-                    <button class="btn-editar btn-renombrar-activo" data-clave="${escaparHTML(activo.clave)}" title="Cambiar nombre">${ICONO_EDITAR}</button>
-                    <span class="pildora">${escaparHTML(activo.tipo)}</span>
-                    ${activo.isin ? `<small class="texto-isin">${escaparHTML(activo.isin)}</small>` : ''}
-                </div>
-                <div class="activo-datos">
-                    <span class="activo-total">${activo.total.toFixed(2)} €</span>
-                    <small>${formatoDecimal(activo.participaciones, 6)} part. · ${porcentaje.toFixed(1)}%</small>
-                </div>
-                <div class="activo-barra"><span style="width: ${porcentaje}%"></span></div>
-            </div>`;
-    });
-
-    listaActivos.querySelectorAll('.btn-renombrar-activo').forEach(btn => {
-        btn.addEventListener('click', () => activarEdicionNombre(btn));
-    });
+    renderizarDistribucion(resumen, totalInvertido);
 
     // Sugerencias de nombres e ISIN en el formulario
     datalistNombres.innerHTML = resumen.map(a => `<option value="${escaparHTML(a.nombre)}"></option>`).join('');
     datalistIsin.innerHTML = resumen.filter(a => a.isin).map(a => `<option value="${escaparHTML(a.isin)}">${escaparHTML(a.nombre)}</option>`).join('');
 
     renderizarOperaciones();
+}
+
+// --- DISTRIBUCIÓN POR ACTIVO (lista, tarta o barras; las carteras cuentan como un solo elemento) ---
+
+let modoDistribucion = ['lista', 'tarta', 'barras'].includes(localStorage.getItem('modoDistribucion')) ? localStorage.getItem('modoDistribucion') : 'lista';
+const carterasAbiertas = new Set();
+
+function construirGruposDistribucion(resumen, total) {
+    const grupos = [];
+    const porCartera = new Map();
+    resumen.forEach(activo => {
+        const cartera = carteraDeActivo(activo.clave);
+        if (!cartera) return grupos.push({ ...activo, esCartera: false });
+        if (!porCartera.has(cartera.id)) {
+            const grupo = { esCartera: true, id: cartera.id, clave: `cartera:${cartera.id}`, nombre: cartera.nombre, total: 0, hijos: [] };
+            porCartera.set(cartera.id, grupo);
+            grupos.push(grupo);
+        }
+        const grupo = porCartera.get(cartera.id);
+        grupo.total += activo.total;
+        grupo.hijos.push(activo);
+    });
+
+    // El color sigue a cada activo/cartera (por orden de su primera aportación), no a su posición
+    const primeraFecha = {};
+    inversiones.forEach(inv => {
+        const clave = claveActivo(inv);
+        if (!primeraFecha[clave] || (inv.fecha || '') < primeraFecha[clave]) primeraFecha[clave] = inv.fecha || '';
+    });
+    const fechaGrupo = g => g.esCartera
+        ? g.hijos.map(h => primeraFecha[h.clave] || '').sort()[0] || ''
+        : primeraFecha[g.clave] || '';
+    [...grupos].sort((a, b) => fechaGrupo(a).localeCompare(fechaGrupo(b)) || a.clave.localeCompare(b.clave))
+        .forEach((g, indice) => { g.color = indice < SERIES_DISPONIBLES ? `var(--serie-${indice + 1})` : 'var(--serie-otros)'; });
+
+    grupos.forEach(g => { g.porcentaje = total > 0 ? (g.total / total) * 100 : 0; });
+    return grupos.sort((a, b) => b.total - a.total);
+}
+
+function filaActivo(activo, porcentaje, color, esHijo = false) {
+    // Las órdenes importadas sin nombre usan el ISIN como nombre: se muestra "Sin nombre" para completarlo
+    const sinNombre = !activo.nombre || activo.nombre === activo.isin;
+    return `
+        <div class="activo-fila ${esHijo ? 'activo-hijo' : ''}">
+            <div class="activo-info">
+                <b class="activo-nombre ${sinNombre ? 'sin-nombre' : ''}">${sinNombre ? 'Sin nombre' : escaparHTML(activo.nombre)}</b>
+                <button class="btn-editar btn-renombrar-activo" data-clave="${escaparHTML(activo.clave)}" title="Cambiar nombre">${ICONO_EDITAR}</button>
+                <span class="pildora">${escaparHTML(activo.tipo)}</span>
+                ${activo.isin ? `<small class="texto-isin">${escaparHTML(activo.isin)}</small>` : ''}
+            </div>
+            <div class="activo-datos">
+                <span class="activo-total">${activo.total.toFixed(2)} €</span>
+                <small>${activo.participaciones > 0 ? `${formatoDecimal(activo.participaciones, 6)} part. · ` : ''}${porcentaje.toFixed(1)}%</small>
+            </div>
+            <div class="activo-barra"><span style="width: ${porcentaje}%; background: ${color}"></span></div>
+        </div>`;
+}
+
+function filaCartera(grupo) {
+    const abierta = carterasAbiertas.has(grupo.id);
+    const hijos = [...grupo.hijos].sort((a, b) => b.total - a.total)
+        .map(h => filaActivo(h, grupo.total > 0 ? (h.total / grupo.total) * 100 : 0, grupo.color, true)).join('');
+    return `
+        <div class="activo-fila fila-cartera ${abierta ? 'abierta' : ''}" data-cartera="${grupo.id}">
+            <div class="activo-info">
+                <button class="btn-desplegar-cartera" data-cartera="${grupo.id}" aria-expanded="${abierta}" title="Ver los activos de la cartera">${ICONO_DESPLEGAR}</button>
+                <b class="activo-nombre">${escaparHTML(grupo.nombre)}</b>
+                <button class="btn-editar btn-editar-cartera-dist" data-cartera="${grupo.id}" title="Editar cartera">${ICONO_EDITAR}</button>
+                <span class="pildora pildora-cartera">Cartera</span>
+                <small class="texto-isin">${grupo.hijos.length} ${grupo.hijos.length === 1 ? 'activo' : 'activos'}</small>
+            </div>
+            <div class="activo-datos">
+                <span class="activo-total">${grupo.total.toFixed(2)} €</span>
+                <small>${grupo.porcentaje.toFixed(1)}%</small>
+            </div>
+            <div class="activo-barra"><span style="width: ${grupo.porcentaje}%; background: ${grupo.color}"></span></div>
+            <div class="cartera-hijos ${abierta ? '' : 'oculto'}">${hijos}</div>
+        </div>`;
+}
+
+function renderizarDistribucion(resumen, total) {
+    document.querySelectorAll('.selector-grafico button').forEach(btn => {
+        const activo = btn.getAttribute('data-modo') === modoDistribucion;
+        btn.classList.toggle('activo', activo);
+        btn.setAttribute('aria-pressed', activo);
+    });
+    document.getElementById('btn-gestionar-carteras').classList.toggle('oculto', resumen.length === 0);
+
+    if (resumen.length === 0) {
+        listaActivos.innerHTML = '<p class="estado-vacio">Aún no has añadido ninguna inversión. Pulsa + para empezar.</p>';
+        return;
+    }
+
+    const grupos = construirGruposDistribucion(resumen, total);
+
+    if (modoDistribucion !== 'lista') {
+        const elementos = agruparOtros(grupos.map(g => ({ nombre: g.nombre, total: g.total, porcentaje: g.porcentaje, color: g.color })));
+        listaActivos.innerHTML = modoDistribucion === 'tarta'
+            ? dibujarTarta(elementos, total, escaparHTML)
+            : dibujarBarras(elementos, total, escaparHTML);
+        conectarInteraccion(listaActivos, elementos);
+        return;
+    }
+
+    listaActivos.innerHTML = grupos.map(g => g.esCartera ? filaCartera(g) : filaActivo(g, g.porcentaje, g.color)).join('');
+
+    listaActivos.querySelectorAll('.btn-renombrar-activo').forEach(btn => {
+        btn.addEventListener('click', () => activarEdicionNombre(btn));
+    });
+    listaActivos.querySelectorAll('.btn-desplegar-cartera').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-cartera');
+            if (carterasAbiertas.has(id)) carterasAbiertas.delete(id); else carterasAbiertas.add(id);
+            const abierta = carterasAbiertas.has(id);
+            const fila = btn.closest('.fila-cartera');
+            fila.classList.toggle('abierta', abierta);
+            fila.querySelector('.cartera-hijos').classList.toggle('oculto', !abierta);
+            btn.setAttribute('aria-expanded', abierta);
+        });
+    });
+    listaActivos.querySelectorAll('.btn-editar-cartera-dist').forEach(btn => {
+        btn.addEventListener('click', () => abrirEdicionCartera(btn.getAttribute('data-cartera')));
+    });
 }
 
 function coincideConFiltros(inv) {
@@ -248,8 +380,9 @@ function renderizarOperaciones() {
         listaInversionesTabla.innerHTML = `<tr><td colspan="7" class="estado-vacio">${mensaje}</td></tr>`;
     }
     visibles.forEach(({ inv, indice }) => {
-        const cantidad = formatoDecimal(inv.cantidad, 6);
-        const precio = formatoDecimal(inv.precio, 4);
+        const conTitulos = tieneDetalleTitulos(inv);
+        const cantidad = conTitulos ? formatoDecimal(inv.cantidad, 6) : '—';
+        const precio = conTitulos ? `${formatoDecimal(inv.precio, 4)} €` : '—';
         const comision = parseFloat(inv.comision || 0);
         const fechaEspanol = ayudas.formatoFechaES(inv.fecha || obtenerFechaHoy());
         const fila = document.createElement('tr');
@@ -259,10 +392,10 @@ function renderizarOperaciones() {
                 ${escaparHTML(inv.nombre || 'Sin nombre')}<br>
                 <span class="pildora">${escaparHTML(inv.tipo || 'Otro')}</span>
                 ${inv.isin ? `<small class="texto-isin">${escaparHTML(inv.isin)}</small>` : ''}
-                <small class="detalle-movil">${cantidad} × ${precio} €${comision > 0 ? ` + ${comision.toFixed(2)} € com.` : ''}</small>
+                <small class="detalle-movil">${conTitulos ? `${cantidad} × ${precio}${comision > 0 ? ` + ${comision.toFixed(2)} € com.` : ''}` : 'Solo importe'}</small>
             </td>
             <td class="col-cantidad">${cantidad}</td>
-            <td class="col-cantidad">${precio} €</td>
+            <td class="col-cantidad">${precio}</td>
             <td class="col-cantidad">${comision > 0 ? `${comision.toFixed(2)} €` : '—'}</td>
             <td class="col-cantidad monto-inversion">${calcularTotalInversion(inv).toFixed(2)} €</td>
             <td>
@@ -305,8 +438,8 @@ function filasExcelInversiones(lista) {
         { v: inv.nombre || 'Sin nombre' },
         { v: inv.isin || '' },
         { v: inv.tipo || 'Otro' },
-        { v: inv.cantidad || 0, tipo: 'numero' },
-        { v: inv.precio || 0, tipo: 'dinero' },
+        tieneDetalleTitulos(inv) ? { v: inv.cantidad, tipo: 'numero' } : null,
+        tieneDetalleTitulos(inv) ? { v: inv.precio, tipo: 'dinero' } : null,
         { v: parseFloat(inv.comision || 0), tipo: 'dinero' },
         { v: parseFloat(calcularTotalInversion(inv).toFixed(2)), tipo: 'dinero' }
     ]);
@@ -331,7 +464,7 @@ export function generarExcelInversiones() {
             { v: activo.nombre },
             { v: activo.isin },
             { v: activo.tipo },
-            { v: parseFloat(activo.participaciones.toFixed(6)), tipo: 'numero' },
+            activo.participaciones > 0 ? { v: parseFloat(activo.participaciones.toFixed(6)), tipo: 'numero' } : null,
             null,
             null,
             { v: parseFloat(activo.total.toFixed(2)), tipo: 'dinero' }
@@ -352,6 +485,10 @@ export function iniciarInversiones(funcionesAyuda) {
     inputPrecio.addEventListener('input', () => recalcularImportes());
     inputComision.addEventListener('input', () => recalcularImportes('comision'));
     inputImporteFinal.addEventListener('input', () => recalcularImportes('final'));
+    inputImporteSolo.addEventListener('input', () => recalcularImportes());
+    document.querySelectorAll('#modo-importe-inversion button').forEach(btn => {
+        btn.addEventListener('click', () => fijarModoImporte(btn.getAttribute('data-valor')));
+    });
 
     // Operaciones: desplegable (cerrado al empezar) con filtros
     const contenedorOperaciones = document.getElementById('contenedor-operaciones');
@@ -361,6 +498,25 @@ export function iniciarInversiones(funcionesAyuda) {
         flechaOperaciones.style.transform = abierto ? 'rotate(180deg)' : 'rotate(0deg)';
     });
     filtroNombre.addEventListener('input', renderizarOperaciones);
+
+    // Modo de la distribución por activo: lista, tarta o barras
+    document.querySelectorAll('.selector-grafico button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            modoDistribucion = btn.getAttribute('data-modo');
+            try { localStorage.setItem('modoDistribucion', modoDistribucion); } catch (error) { /* sin memoria */ }
+            renderizarInversiones();
+        });
+    });
+
+    iniciarCarteras({
+        abrirModal: ayudas.abrirModal,
+        cerrarModal: ayudas.cerrarModal,
+        mostrarToast: ayudas.mostrarToast,
+        escaparHTML,
+        obtenerResumenActivos: () => calcularResumenPorActivo(inversiones),
+        alCambiar: renderizarInversiones
+    });
+    document.getElementById('btn-gestionar-carteras').addEventListener('click', abrirModalCarteras);
     filtroTipo.addEventListener('change', renderizarOperaciones);
 
     // Activo ya registrado: al escribir su nombre se rellena el ISIN (y al revés), además del tipo
@@ -394,6 +550,11 @@ export function iniciarInversiones(funcionesAyuda) {
             comision: Math.max(0, comision),
             fecha: inputFecha.value
         };
+        if (modoImporte === 'total') {
+            const importe = parseFloat(inputImporteSolo.value);
+            if (!(importe > 0)) return inputImporteSolo.focus();
+            Object.assign(datosInversion, { cantidad: 0, precio: 0, comision: 0, importe: redondear(importe) });
+        }
 
         if (indiceEditando !== null) {
             inversiones[indiceEditando] = datosInversion;
