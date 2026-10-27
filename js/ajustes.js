@@ -3,7 +3,7 @@
 import {
     abrirModalCopia, hayContrasenaGuardada, guardarContrasenaCopia,
     obtenerDiasRecordatorio, fijarDiasRecordatorio, describirUltimaCopia
-} from './copia-seguridad.js?v=14';
+} from './copia-seguridad.js?v=15';
 
 const TEMAS = ['sistema', 'claro', 'oscuro'];
 const CLAVES_DATOS = ['gastos', 'inversiones', 'carteras', 'exportaciones', 'ultimaCopia', 'recordatorioPospuesto',

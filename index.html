@@ -18,19 +18,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=14">
+    <link rel="stylesheet" href="css/style.css?v=15">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
-    <!-- Barra superior: marca -->
-    <header class="barra-superior">
-        <div class="barra-interior">
-            <div class="marca">
-                <img src="icono.png" alt="" class="marca-logo">
-                <span class="marca-nombre">Gestor de Gastos</span>
-            </div>
-        </div>
-    </header>
 
     <main class="app-contenedor">
 
@@ -260,7 +251,7 @@
         </div>
 
         <section class="tarjeta">
-            <div class="cabecera-tarjeta estatica">
+            <div class="cabecera-tarjeta" id="cabecera-archivos">
                 <div class="cabecera-tarjeta-titulo">
                     <span class="icono-tarjeta">
                         <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -270,8 +261,13 @@
                         <small id="num-archivos">0 archivos exportados</small>
                     </div>
                 </div>
+                <svg id="icono-flecha-archivos" class="icono-flecha" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div id="lista-archivos" class="lista-archivos"></div>
+            <div id="contenedor-archivos" class="acordeon-contenido">
+                <div class="acordeon-interior">
+                    <div id="lista-archivos" class="lista-archivos"></div>
+                </div>
+            </div>
         </section>
       </div>
 
@@ -726,6 +722,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=14"></script>
+    <script type="module" src="js/main.js?v=15"></script>
 </body>
 </html>
