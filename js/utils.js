@@ -101,12 +101,17 @@ export function calcularTotalInversion(inv) {
     return parseFloat(inv.cantidad || 0) * parseFloat(inv.precio || 0);
 }
 
-// Agrupa las aportaciones por activo (nombre), ordenado de mayor a menor importe
+// Clave de un activo: su ISIN si lo tiene; si no, su nombre
+export function claveActivo(inv) {
+    return inv.isin ? inv.isin.toUpperCase() : (inv.nombre || 'Sin nombre').trim().toLowerCase();
+}
+
+// Agrupa las aportaciones por activo (ISIN o nombre), ordenado de mayor a menor importe
 export function calcularResumenPorActivo(lista) {
     const activos = {};
     lista.forEach(inv => {
-        const clave = (inv.nombre || 'Sin nombre').trim();
-        if (!activos[clave]) activos[clave] = { nombre: clave, tipo: inv.tipo || 'Otro', participaciones: 0, total: 0 };
+        const clave = claveActivo(inv);
+        if (!activos[clave]) activos[clave] = { clave, nombre: (inv.nombre || 'Sin nombre').trim(), isin: inv.isin || '', tipo: inv.tipo || 'Otro', participaciones: 0, total: 0 };
         activos[clave].participaciones += parseFloat(inv.cantidad || 0);
         activos[clave].total += calcularTotalInversion(inv);
     });

@@ -1,4 +1,5 @@
-import { descargarArchivo } from './utils.js?v=4';
+import { descargarArchivo } from './utils.js?v=7';
+import { base64ABytes } from './excel.js?v=7';
 
 const ICONO_DESCARGAR = '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
 const ICONO_ELIMINAR = '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
@@ -47,12 +48,16 @@ function formatoFechaHora(fechaISO) {
     return `${dia}/${mes}/${fecha.getFullYear()} · ${horas}:${minutos}`;
 }
 
-function formatoTamano(texto) {
-    const bytes = new Blob([texto || '']).size;
+function bytesDelArchivo(exp) {
+    return exp.codificacion === 'base64' ? base64ABytes(exp.contenido) : exp.contenido;
+}
+
+function formatoTamano(exp) {
+    const bytes = new Blob([bytesDelArchivo(exp)]).size;
     return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
 }
 
-export function registrarExportacion({ nombreArchivo, tipo, formato, contenido, mime }) {
+export function registrarExportacion({ nombreArchivo, tipo, formato, contenido, mime, codificacion = 'texto' }) {
     exportaciones.unshift({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         nombreArchivo,
@@ -60,6 +65,7 @@ export function registrarExportacion({ nombreArchivo, tipo, formato, contenido, 
         formato,
         fecha: new Date().toISOString(),
         contenido,
+        codificacion,
         mime
     });
     guardarExportaciones();
@@ -86,7 +92,7 @@ export function renderizarExportaciones() {
                     <b>${escaparHTML(exp.nombreArchivo)}</b>
                     <div class="archivo-meta">
                         <span class="pildora ${tipo.clase}">${tipo.etiqueta}</span>
-                        <small>${formatoFechaHora(exp.fecha)}${disponible ? ' · ' + formatoTamano(exp.contenido) : ''}</small>
+                        <small>${formatoFechaHora(exp.fecha)}${disponible ? ' · ' + formatoTamano(exp) : ''}</small>
                     </div>
                 </div>
                 <div class="acciones-fila">
@@ -100,7 +106,7 @@ export function renderizarExportaciones() {
         btn.addEventListener('click', function() {
             const exp = exportaciones.find(e => String(e.id) === this.getAttribute('data-id'));
             if (!exp || !exp.contenido) return;
-            descargarArchivo(new Blob([exp.contenido], { type: exp.mime }), exp.nombreArchivo);
+            descargarArchivo(new Blob([bytesDelArchivo(exp)], { type: exp.mime }), exp.nombreArchivo);
             ayudas.mostrarToast('Archivo descargado');
         });
     });

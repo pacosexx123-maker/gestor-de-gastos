@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=4">
+    <link rel="stylesheet" href="css/style.css?v=7">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -23,7 +23,7 @@
                 <span class="marca-nombre">Gestor de Gastos</span>
             </div>
             <div class="botones-superiores">
-                <button id="btn-exportar" class="btn-exportar" title="Exportar a Excel (CSV)">
+                <button id="btn-exportar" class="btn-exportar" title="Exportar a Excel">
                     <svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
                     <span>Excel</span>
                 </button>
@@ -31,11 +31,11 @@
                     <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     <span>Exportar</span>
                 </button>
-                <button id="btn-importar-json" class="btn-exportar" title="Restaurar copia de seguridad">
+                <button id="btn-importar-json" class="btn-exportar" title="Restaurar copia de seguridad o importar órdenes del bróker (CSV / Excel)">
                     <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     <span>Importar</span>
                 </button>
-                <input type="file" id="input-archivo-json" accept=".json" style="display: none;">
+                <input type="file" id="input-archivo-json" accept=".json,.csv,.xlsx,.xls,.txt,application/json,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display: none;">
             </div>
         </div>
     </header>
@@ -351,14 +351,21 @@
                     <input type="text" id="inv-nombre" list="lista-nombres-activos" placeholder="Ej. Vanguard Global Stock Index" autocomplete="off" required>
                     <datalist id="lista-nombres-activos"></datalist>
                 </div>
-                <div class="grupo-input">
-                    <label for="inv-tipo">Tipo</label>
-                    <select id="inv-tipo">
-                        <option value="Fondo">Fondo</option>
-                        <option value="Acción">Acción</option>
-                        <option value="ETF">ETF</option>
-                        <option value="Otro">Otro</option>
-                    </select>
+                <div class="dos-columnas">
+                    <div class="grupo-input">
+                        <label for="inv-isin">ISIN</label>
+                        <input type="text" id="inv-isin" list="lista-isin-activos" placeholder="Ej. LU1598720172" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" pattern="[A-Z]{2}[A-Z0-9]{9}[0-9]" title="12 caracteres: 2 letras de país, 9 letras o números y 1 dígito (ej. LU1598720172)">
+                        <datalist id="lista-isin-activos"></datalist>
+                    </div>
+                    <div class="grupo-input">
+                        <label for="inv-tipo">Tipo</label>
+                        <select id="inv-tipo">
+                            <option value="Fondo">Fondo</option>
+                            <option value="Acción">Acción</option>
+                            <option value="ETF">ETF</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="dos-columnas">
                     <div class="grupo-input">
@@ -383,9 +390,29 @@
         </div>
     </div>
 
+    <!-- Modal vista previa de importación de órdenes del bróker -->
+    <div id="modal-importar-ordenes" class="modal-overlay oculto">
+        <div class="modal-contenido modal-ancho">
+            <div class="cabecera-modal">
+                <div>
+                    <b>Importar órdenes</b>
+                    <small id="resumen-importacion" class="subtitulo-modal"></small>
+                </div>
+                <button id="btn-cerrar-importar" class="btn-cerrar" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <p class="texto-ayuda">Revisa las órdenes antes de añadirlas. Solo vienen marcadas las finalizadas que aún no habías importado. Si un ISIN es nuevo, escribe el nombre del fondo una vez: a partir de ahí se reconocerá solo.</p>
+            <div id="lista-ordenes-importar" class="lista-ordenes"></div>
+            <div class="pie-modal">
+                <button type="button" id="btn-confirmar-importacion" class="btn-guardar">Importar órdenes</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Notificación -->
     <div id="toast-notificacion" class="toast">Mensaje</div>
 
-    <script type="module" src="js/main.js?v=4"></script>
+    <script type="module" src="js/main.js?v=7"></script>
 </body>
 </html>

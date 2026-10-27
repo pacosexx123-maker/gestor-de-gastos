@@ -2,12 +2,14 @@ import {
     obtenerFechaHoy, obtenerMesActual, cargarGastosDesdeMemoria, guardarGastosEnMemoria, 
     filtrarMovimientosPorMes, calcularGastos, calcularIngresosNomina, calcularGastoHogar, 
     calcularDesglosePersonal, calcularDesgloseHogar, descargarArchivo
-} from './utils.js?v=4';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=4';
+} from './utils.js?v=7';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, bytesABase64, MIME_EXCEL } from './excel.js?v=7';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=7';
 import { 
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, 
-    reemplazarInversiones, generarCSVInversiones 
-} from './inversiones.js?v=4';
+    reemplazarInversiones, generarExcelInversiones 
+} from './inversiones.js?v=7';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=7';
 
 const formulario = document.getElementById('formulario');
 const listaGastosTabla = document.getElementById('lista-gastos');
@@ -324,9 +326,15 @@ formulario.addEventListener('submit', function(evento) {
 });
 
 // Descarga el archivo y lo deja anotado en la pestaña "Archivos"
+// El contenido puede ser texto (JSON) o bytes (Excel)
 function exportarYRegistrar({ contenido, mime, nombreArchivo, tipo, formato }) {
     descargarArchivo(new Blob([contenido], { type: mime }), nombreArchivo);
-    registrarExportacion({ nombreArchivo, tipo, formato, contenido, mime });
+    const esBinario = contenido instanceof Uint8Array;
+    registrarExportacion({
+        nombreArchivo, tipo, formato, mime,
+        contenido: esBinario ? bytesABase64(contenido) : contenido,
+        codificacion: esBinario ? 'base64' : 'texto'
+    });
 }
 
 // --- EXPORTAR COPIA DE SEGURIDAD (JSON): gastos e inversiones ---
@@ -355,6 +363,17 @@ inputArchivoJson.addEventListener('change', (evento) => {
     const archivo = evento.target.files[0];
     if (!archivo) return;
 
+    // Órdenes del bróker (CSV o Excel): se añaden a las inversiones tras una vista previa
+    const extension = archivo.name.split('.').pop().toLowerCase();
+    if (extension === 'xls') {
+        inputArchivoJson.value = '';
+        return alert('Este formato de Excel antiguo (.xls) no se puede leer. Ábrelo y guárdalo como .xlsx o .csv.');
+    }
+    if (['csv', 'xlsx', 'txt'].includes(extension)) {
+        importarOrdenesDesdeArchivo(archivo).finally(() => { inputArchivoJson.value = ''; });
+        return;
+    }
+
     const lector = new FileReader();
     lector.onload = function(e) {
         try {
@@ -382,31 +401,61 @@ inputArchivoJson.addEventListener('change', (evento) => {
     lector.readAsText(archivo);
 });
 
-// --- EXPORTAR EXCEL (CSV): exporta la sección activa ---
+// --- EXPORTAR EXCEL (.xlsx): hoja "Total" + una hoja por mes ---
+const COLUMNAS_EXCEL_GASTOS = [
+    { titulo: 'Fecha', ancho: 12 },
+    { titulo: 'Tipo', ancho: 10 },
+    { titulo: 'Categoría', ancho: 16 },
+    { titulo: 'Concepto', ancho: 36 },
+    { titulo: 'Cantidad (€)', ancho: 14 }
+];
+
+function filasExcelGastos(lista) {
+    const filas = ordenarPorFecha(lista).map(m => [
+        { v: m.fecha, tipo: 'fecha' },
+        { v: m.tipo === 'ingreso' ? 'Ingreso' : 'Gasto' },
+        { v: m.categoria || 'Otros' },
+        { v: m.concepto || 'Sin concepto' },
+        { v: parseFloat(m.cantidad || 0), tipo: 'dinero' }
+    ]);
+    const ingresos = lista.filter(m => m.tipo === 'ingreso').reduce((acumulado, m) => acumulado + parseFloat(m.cantidad || 0), 0);
+    const gastos = lista.filter(m => m.tipo !== 'ingreso').reduce((acumulado, m) => acumulado + parseFloat(m.cantidad || 0), 0);
+    filas.push([]);
+    filas.push([null, null, null, { v: 'Total ingresos', negrita: true }, { v: parseFloat(ingresos.toFixed(2)), tipo: 'dinero', negrita: true }]);
+    filas.push([null, null, null, { v: 'Total gastos', negrita: true }, { v: parseFloat(gastos.toFixed(2)), tipo: 'dinero', negrita: true }]);
+    filas.push([null, null, null, { v: 'Balance', negrita: true }, { v: parseFloat((ingresos - gastos).toFixed(2)), tipo: 'dinero', negrita: true }]);
+    return filas;
+}
+
+function generarExcelGastos() {
+    const hojas = [{ nombre: 'Total', columnas: COLUMNAS_EXCEL_GASTOS, filas: filasExcelGastos(movimientos) }];
+    agruparPorMes(movimientos).forEach(mes => {
+        hojas.push({ nombre: mes.nombre, columnas: COLUMNAS_EXCEL_GASTOS, filas: filasExcelGastos(mes.elementos) });
+    });
+    return crearLibroExcel(hojas);
+}
+
+// Exporta la sección activa (en "Archivos" exporta los gastos)
 document.getElementById('btn-exportar').addEventListener('click', () => {
     if (seccionActiva === 'inversiones') {
-        const csvInversiones = generarCSVInversiones();
-        if (!csvInversiones) return alert('No hay inversiones que exportar.');
+        const excelInversiones = generarExcelInversiones();
+        if (!excelInversiones) return alert('No hay inversiones que exportar.');
         exportarYRegistrar({
-            contenido: csvInversiones,
-            mime: 'text/csv;charset=utf-8;',
-            nombreArchivo: `TusInversiones_${obtenerFechaHoy()}.csv`,
+            contenido: excelInversiones,
+            mime: MIME_EXCEL,
+            nombreArchivo: `TusInversiones_${obtenerFechaHoy()}.xlsx`,
             tipo: 'inversiones',
-            formato: 'CSV'
+            formato: 'XLSX'
         });
         return mostrarToast('Inversiones exportadas');
     }
     if(movimientos.length === 0) return alert('No hay movimientos que exportar.');
-    let csv = '\uFEFFFecha,Tipo,Categoría,Concepto,Cantidad (€)\n';
-    movimientos.forEach(m => {
-        csv += `${formatoFechaES(m.fecha || obtenerFechaHoy())},${m.tipo || 'gasto'},"${m.categoria || ''}","${m.concepto || ''}",${m.cantidad || 0}\n`;
-    });
     exportarYRegistrar({
-        contenido: csv,
-        mime: 'text/csv;charset=utf-8;',
-        nombreArchivo: `TusGastos_${obtenerFechaHoy()}.csv`,
+        contenido: generarExcelGastos(),
+        mime: MIME_EXCEL,
+        nombreArchivo: `TusGastos_${obtenerFechaHoy()}.xlsx`,
         tipo: 'gastos',
-        formato: 'CSV'
+        formato: 'XLSX'
     });
     mostrarToast('Gastos exportados');
 });
@@ -426,4 +475,5 @@ inputFecha.value = obtenerFechaHoy();
 renderizarMovimientos();
 iniciarInversiones({ abrirModal, cerrarModal, mostrarToast, formatoFechaES });
 iniciarExportaciones({ mostrarToast });
+iniciarImportacionOrdenes({ abrirModal, cerrarModal, mostrarToast, formatoFechaES, alImportar: () => cambiarSeccion('inversiones') });
 cambiarSeccion(seccionActiva);
