@@ -97,8 +97,14 @@ export function guardarInversionesEnMemoria(listaInversiones) {
     localStorage.setItem('inversiones', JSON.stringify(listaInversiones));
 }
 
-export function calcularTotalInversion(inv) {
+// Valor de los títulos al precio de compra (sin comisiones)
+export function calcularValorTitulos(inv) {
     return parseFloat(inv.cantidad || 0) * parseFloat(inv.precio || 0);
+}
+
+// Lo que realmente se ha pagado: títulos × precio + comisión
+export function calcularTotalInversion(inv) {
+    return calcularValorTitulos(inv) + parseFloat(inv.comision || 0);
 }
 
 // Clave de un activo: su ISIN si lo tiene; si no, su nombre

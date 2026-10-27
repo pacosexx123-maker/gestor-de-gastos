@@ -2,14 +2,15 @@ import {
     obtenerFechaHoy, obtenerMesActual, cargarGastosDesdeMemoria, guardarGastosEnMemoria, 
     filtrarMovimientosPorMes, calcularGastos, calcularIngresosNomina, calcularGastoHogar, 
     calcularDesglosePersonal, calcularDesgloseHogar, descargarArchivo
-} from './utils.js?v=8';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, bytesABase64, MIME_EXCEL } from './excel.js?v=8';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=8';
+} from './utils.js?v=11';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, bytesABase64, MIME_EXCEL } from './excel.js?v=11';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=11';
 import { 
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, 
     reemplazarInversiones, generarExcelInversiones 
-} from './inversiones.js?v=8';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=8';
+} from './inversiones.js?v=11';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=11';
+import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=11';
 
 const formulario = document.getElementById('formulario');
 const listaGastosTabla = document.getElementById('lista-gastos');
@@ -35,11 +36,11 @@ let touchendX = 0;
 const zonaSwipeMes = document.getElementById('zona-swipe-mes');
 
 zonaSwipeMes.addEventListener('touchstart', e => {
-    touchstartX = e.changedTouches[0].screenX;
+    touchstartX = e.changedTouches[0].clientX;
 }, {passive: true});
 
 zonaSwipeMes.addEventListener('touchend', e => {
-    touchendX = e.changedTouches[0].screenX;
+    touchendX = e.changedTouches[0].clientX;
     manejarSwipeMes();
 }, {passive: true});
 
@@ -66,9 +67,19 @@ const SECCIONES = ['gastos', 'inversiones', 'archivos'];
 let seccionActiva = SECCIONES.includes(localStorage.getItem('seccionActiva')) ? localStorage.getItem('seccionActiva') : 'gastos';
 
 function cambiarSeccion(seccion) {
+    const anterior = seccionActiva;
     seccionActiva = seccion;
     localStorage.setItem('seccionActiva', seccion);
     SECCIONES.forEach(s => document.getElementById(`seccion-${s}`).classList.toggle('oculto', s !== seccion));
+
+    // La sección nueva entra desde el lado hacia el que se avanza
+    if (anterior !== seccion) {
+        const elemento = document.getElementById(`seccion-${seccion}`);
+        const clase = SECCIONES.indexOf(seccion) > SECCIONES.indexOf(anterior) ? 'entrar-derecha' : 'entrar-izquierda';
+        elemento.classList.remove('entrar-derecha', 'entrar-izquierda');
+        void elemento.offsetWidth;
+        elemento.classList.add(clase);
+    }
     document.querySelectorAll('.nav-item').forEach(btn => {
         btn.classList.toggle('activo', btn.getAttribute('data-seccion') === seccion);
     });
@@ -83,6 +94,33 @@ function cambiarSeccion(seccion) {
 document.querySelectorAll('.nav-item').forEach(btn => {
     btn.addEventListener('click', () => cambiarSeccion(btn.getAttribute('data-seccion')));
 });
+
+// DESLIZAR HACIA LOS LADOS PARA CAMBIAR DE SECCIÓN
+// (sobre el selector de mes se sigue cambiando de mes)
+let inicioToque = null;
+
+document.addEventListener('touchstart', e => {
+    inicioToque = null;
+    if (e.touches.length !== 1 || document.body.classList.contains('body-fijo')) return;
+    const objetivo = e.target;
+    if (objetivo.closest('#zona-swipe-mes, input, select, textarea')) return;
+    const tabla = objetivo.closest('.tabla-contenedor');
+    if (tabla && tabla.scrollWidth > tabla.clientWidth) return; // tabla que se desplaza de lado
+    inicioToque = { x: e.touches[0].clientX, y: e.touches[0].clientY, tiempo: Date.now() };
+}, {passive: true});
+
+document.addEventListener('touchend', e => {
+    if (!inicioToque) return;
+    const dx = e.changedTouches[0].clientX - inicioToque.x;
+    const dy = e.changedTouches[0].clientY - inicioToque.y;
+    const duracion = Date.now() - inicioToque.tiempo;
+    inicioToque = null;
+
+    // Solo gestos claramente horizontales y rápidos, para no interferir con el scroll
+    if (duracion > 800 || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const destino = SECCIONES.indexOf(seccionActiva) + (dx < 0 ? 1 : -1);
+    if (destino >= 0 && destino < SECCIONES.length) cambiarSeccion(SECCIONES[destino]);
+}, {passive: true});
 
 // ACORDEÓN HISTORIAL
 const cabeceraHistorial = document.getElementById('cabecera-historial');
@@ -337,19 +375,23 @@ function exportarYRegistrar({ contenido, mime, nombreArchivo, tipo, formato }) {
     });
 }
 
-// --- EXPORTAR COPIA DE SEGURIDAD (JSON): gastos e inversiones ---
-document.getElementById('btn-exportar-json').addEventListener('click', () => {
-    const inversiones = obtenerInversiones();
-    if(movimientos.length === 0 && inversiones.length === 0) return alert('No hay datos que exportar.');
-    exportarYRegistrar({
-        contenido: JSON.stringify({ movimientos, inversiones }, null, 2),
-        mime: 'application/json',
-        nombreArchivo: `backup_gastos_${obtenerFechaHoy()}.json`,
-        tipo: 'copia',
-        formato: 'JSON'
-    });
-    mostrarToast('Copia de seguridad guardada');
-});
+// --- COPIA DE SEGURIDAD (gastos e inversiones, cifrada con contraseña) ---
+document.getElementById('btn-exportar-json').addEventListener('click', () => abrirModalCopia());
+
+function restaurarCopia(datosImportados) {
+    if (Array.isArray(datosImportados)) {
+        // Copias antiguas: solo contienen los movimientos de gastos
+        movimientos = datosImportados;
+    } else if (datosImportados && Array.isArray(datosImportados.movimientos)) {
+        movimientos = datosImportados.movimientos;
+        reemplazarInversiones(Array.isArray(datosImportados.inversiones) ? datosImportados.inversiones : []);
+    } else {
+        return alert('El archivo seleccionado no es válido.');
+    }
+    guardarGastosEnMemoria(movimientos);
+    renderizarMovimientos();
+    mostrarToast('Copia restaurada con éxito');
+}
 
 // --- IMPORTAR COPIA DE SEGURIDAD (JSON) ---
 const btnImportarJson = document.getElementById('btn-importar-json');
@@ -376,27 +418,18 @@ inputArchivoJson.addEventListener('change', (evento) => {
 
     const lector = new FileReader();
     lector.onload = function(e) {
-        try {
-            const datosImportados = JSON.parse(e.target.result);
-            if (Array.isArray(datosImportados)) {
-                // Copias antiguas: solo contienen los movimientos de gastos
-                movimientos = datosImportados;
-                guardarGastosEnMemoria(movimientos);
-                renderizarMovimientos();
-                mostrarToast('Copia restaurada con éxito');
-            } else if (datosImportados && Array.isArray(datosImportados.movimientos)) {
-                movimientos = datosImportados.movimientos;
-                guardarGastosEnMemoria(movimientos);
-                renderizarMovimientos();
-                reemplazarInversiones(Array.isArray(datosImportados.inversiones) ? datosImportados.inversiones : []);
-                mostrarToast('Copia restaurada con éxito');
-            } else {
-                alert('El archivo seleccionado no es válido.');
-            }
-        } catch (error) {
-            alert('Error al leer el archivo JSON.');
-        }
         inputArchivoJson.value = ''; // Limpiar input
+        let datosImportados;
+        try {
+            datosImportados = JSON.parse(e.target.result);
+        } catch (error) {
+            return alert('Error al leer el archivo JSON.');
+        }
+        if (esCopiaCifrada(datosImportados)) {
+            pedirContrasenaYDescifrar(datosImportados).then(datos => { if (datos) restaurarCopia(datos); });
+        } else {
+            restaurarCopia(datosImportados);
+        }
     };
     lector.readAsText(archivo);
 });
@@ -486,4 +519,8 @@ function iniciarConSeguridad(nombre, iniciar) {
 iniciarConSeguridad('Inversiones', () => iniciarInversiones({ abrirModal, cerrarModal, mostrarToast, formatoFechaES }));
 iniciarConSeguridad('Archivos', () => iniciarExportaciones({ mostrarToast }));
 iniciarConSeguridad('la importación', () => iniciarImportacionOrdenes({ abrirModal, cerrarModal, mostrarToast, formatoFechaES, alImportar: () => cambiarSeccion('inversiones') }));
+iniciarConSeguridad('las copias de seguridad', () => iniciarCopiaSeguridad({
+    abrirModal, cerrarModal, mostrarToast, registrarExportacion,
+    obtenerDatos: () => ({ movimientos, inversiones: obtenerInversiones() })
+}));
 cambiarSeccion(seccionActiva);

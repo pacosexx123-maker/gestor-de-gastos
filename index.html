@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=8">
+    <link rel="stylesheet" href="css/style.css?v=11">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -27,7 +27,7 @@
                     <svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
                     <span>Excel</span>
                 </button>
-                <button id="btn-exportar-json" class="btn-exportar" title="Guardar copia de seguridad">
+                <button id="btn-exportar-json" class="btn-exportar" title="Copia de seguridad cifrada">
                     <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     <span>Exportar</span>
                 </button>
@@ -194,31 +194,50 @@
 
         <!-- Operaciones -->
         <section class="tarjeta">
-            <div class="cabecera-tarjeta estatica">
+            <div class="cabecera-tarjeta" id="cabecera-operaciones">
                 <div class="cabecera-tarjeta-titulo">
                     <span class="icono-tarjeta">
                         <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                     </span>
                     <div>
                         <b>Operaciones</b>
-                        <small>De la más reciente a la más antigua</small>
+                        <small id="resumen-operaciones">De la más reciente a la más antigua</small>
                     </div>
                 </div>
+                <svg id="icono-flecha-operaciones" class="icono-flecha" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div class="tabla-contenedor">
+            <div id="contenedor-operaciones" class="acordeon-contenido">
+              <div class="acordeon-interior">
+                <div class="filtros-operaciones">
+                    <div class="filtro-busqueda">
+                        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="search" id="filtro-inv-nombre" placeholder="Buscar por nombre o ISIN" autocomplete="off" aria-label="Buscar por nombre o ISIN">
+                    </div>
+                    <select id="filtro-inv-tipo" aria-label="Filtrar por tipo">
+                        <option value="">Todos los tipos</option>
+                        <option value="Fondo">Fondos</option>
+                        <option value="Acción">Acciones</option>
+                        <option value="ETF">ETF</option>
+                        <option value="Otro">Otros</option>
+                    </select>
+                </div>
+                <div class="tabla-contenedor">
                 <table class="tabla tabla-inversiones">
                     <thead>
                         <tr>
                             <th>Fecha</th>
                             <th>Activo</th>
-                            <th class="col-cantidad col-ocultar-movil">Participaciones</th>
+                            <th class="col-cantidad col-ocultar-movil">Títulos</th>
                             <th class="col-cantidad col-ocultar-movil">Precio</th>
+                            <th class="col-cantidad col-ocultar-movil">Comisión</th>
                             <th class="col-cantidad">Total</th>
                             <th class="col-acciones"></th>
                         </tr>
                     </thead>
                     <tbody id="lista-inversiones"></tbody>
                 </table>
+                </div>
+              </div>
             </div>
         </section>
       </div>
@@ -369,22 +388,37 @@
                 </div>
                 <div class="dos-columnas">
                     <div class="grupo-input">
-                        <label for="inv-cantidad">Cantidad (participaciones)</label>
+                        <label for="inv-cantidad">Títulos / participaciones</label>
                         <input type="number" id="inv-cantidad" placeholder="0" step="any" min="0" inputmode="decimal" required>
                     </div>
                     <div class="grupo-input">
-                        <label for="inv-precio">Precio de mercado (€)</label>
+                        <label for="inv-precio">Precio por título (€)</label>
                         <input type="number" id="inv-precio" placeholder="0.00" step="any" min="0" inputmode="decimal" required>
                     </div>
                 </div>
+                <div class="dos-columnas">
+                    <div class="grupo-input">
+                        <label for="inv-comision">Comisión (€)</label>
+                        <input type="number" id="inv-comision" placeholder="0.00" step="any" min="0" inputmode="decimal">
+                    </div>
+                    <div class="grupo-input">
+                        <label for="inv-importe-final">Importe final pagado (€)</label>
+                        <input type="number" id="inv-importe-final" placeholder="0.00" step="any" min="0" inputmode="decimal">
+                    </div>
+                </div>
+                <p class="texto-ayuda texto-ayuda-form">Rellena la comisión o el importe final: el otro se calcula solo.</p>
                 <div class="grupo-input">
                     <label for="inv-fecha">Fecha</label>
                     <input type="date" id="inv-fecha" required>
                 </div>
                 <div class="resumen-formulario">
-                    <span>Importe total</span>
+                    <div>
+                        <span>Total pagado</span>
+                        <small id="inv-desglose-formulario">0.00 € en títulos + 0.00 € de comisión</small>
+                    </div>
                     <b><span id="inv-total-formulario">0.00</span> €</b>
                 </div>
+                <p id="inv-error-comision" class="texto-error oculto">El importe final no puede ser menor que títulos × precio.</p>
                 <button type="submit" id="btn-guardar-inversion" class="btn-guardar">Guardar Inversión</button>
             </form>
         </div>
@@ -407,6 +441,76 @@
             <div class="pie-modal">
                 <button type="button" id="btn-confirmar-importacion" class="btn-guardar">Importar órdenes</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal copia de seguridad (manual o como aviso periódico) -->
+    <div id="modal-copia" class="modal-overlay oculto">
+        <div class="modal-contenido">
+            <div class="cabecera-modal">
+                <div>
+                    <b>Copia de seguridad</b>
+                    <small id="texto-ultima-copia" class="subtitulo-modal"></small>
+                </div>
+                <button id="btn-cerrar-copia" class="btn-cerrar" aria-label="Ahora no" title="Ahora no">
+                    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <p id="aviso-copia" class="aviso-copia oculto"></p>
+            <form id="formulario-copia">
+                <label class="opcion-check">
+                    <input type="checkbox" id="copia-cifrar" checked>
+                    <span>Cifrar con contraseña <em>(recomendado)</em></span>
+                </label>
+                <div id="grupo-contrasena">
+                    <div class="dos-columnas">
+                        <div class="grupo-input">
+                            <label for="copia-contrasena">Contraseña</label>
+                            <input type="password" id="copia-contrasena" autocomplete="new-password" minlength="6" placeholder="Mínimo 6 caracteres">
+                        </div>
+                        <div class="grupo-input">
+                            <label for="copia-contrasena-2">Repetir contraseña</label>
+                            <input type="password" id="copia-contrasena-2" autocomplete="new-password" minlength="6">
+                        </div>
+                    </div>
+                    <label class="opcion-check">
+                        <input type="checkbox" id="copia-recordar">
+                        <span>Recordar la contraseña en este móvil</span>
+                    </label>
+                    <p class="texto-ayuda">Sin esta contraseña nadie podrá abrir la copia, ni siquiera tu correo. Si la olvidas, no se puede recuperar: guárdala en un lugar seguro.</p>
+                </div>
+                <div class="grupo-input">
+                    <label for="copia-frecuencia">Recordarme hacer una copia</label>
+                    <select id="copia-frecuencia">
+                        <option value="3">Cada 3 días</option>
+                        <option value="7">Cada semana</option>
+                        <option value="14">Cada 2 semanas</option>
+                        <option value="30">Cada mes</option>
+                        <option value="0">Nunca</option>
+                    </select>
+                </div>
+                <button type="submit" id="btn-generar-copia" class="btn-guardar">Enviar copia de seguridad</button>
+                <button type="button" id="btn-compartir-copia" class="btn-guardar oculto">Copia lista · Enviar ahora</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal contraseña para restaurar una copia cifrada -->
+    <div id="modal-contrasena" class="modal-overlay oculto">
+        <div class="modal-contenido">
+            <div class="cabecera-modal">
+                <b>Copia cifrada</b>
+                <button id="btn-cerrar-contrasena" class="btn-cerrar" aria-label="Cancelar">
+                    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <p class="texto-ayuda">Escribe la contraseña con la que creaste esta copia. Se sustituirán los datos actuales por los de la copia.</p>
+            <div class="grupo-input">
+                <label for="restaurar-contrasena">Contraseña</label>
+                <input type="password" id="restaurar-contrasena" autocomplete="current-password">
+            </div>
+            <p id="error-contrasena" class="texto-error oculto">Contraseña incorrecta. Inténtalo de nuevo.</p>
+            <button type="button" id="btn-restaurar-copia" class="btn-guardar">Restaurar copia</button>
         </div>
     </div>
 
@@ -435,6 +539,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=8"></script>
+    <script type="module" src="js/main.js?v=11"></script>
 </body>
 </html>
