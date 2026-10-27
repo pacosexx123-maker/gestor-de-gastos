@@ -1519,3 +1519,81 @@ input:focus, select:focus {
     :root:not([data-theme="light"]) .btn-flotante { background: var(--superficie); color: var(--texto-principal); border: 1px solid var(--borde); }
 }
 :root[data-theme="dark"] .btn-flotante { background: var(--superficie); color: var(--texto-principal); border: 1px solid var(--borde); }
+
+/* =========================================================
+   Rentabilidad (verde si se gana, rojo si se pierde)
+   ========================================================= */
+.rentabilidad-positiva { --color-rent: var(--ingreso); --color-rent-suave: var(--ingreso-suave); }
+.rentabilidad-negativa { --color-rent: var(--gasto); --color-rent-suave: var(--gasto-suave); }
+.rentabilidad-neutra { --color-rent: var(--texto-secundario); --color-rent-suave: var(--superficie-2); }
+
+.btn-rentabilidad {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    margin-left: 6px;
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: var(--color-rent-suave);
+    color: var(--color-rent);
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    vertical-align: 1px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.btn-rentabilidad.sin-valor {
+    background: transparent;
+    border: 1px dashed var(--borde-fuerte);
+    color: var(--texto-terciario);
+    font-weight: 500;
+}
+.btn-rentabilidad:hover { filter: brightness(0.96); }
+
+.linea-valor-actual {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    margin-top: -6px;
+    font-size: 13px;
+    color: var(--texto-secundario);
+}
+.linea-valor-actual b { color: var(--texto-principal); font-variant-numeric: tabular-nums; }
+.etiqueta-rentabilidad {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--color-rent-suave);
+    color: var(--color-rent);
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.rentabilidad-operacion {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px !important;
+    font-weight: 600;
+    color: var(--color-rent) !important;
+}
+
+.valor-vista-previa {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 6px;
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    border-radius: var(--radio-sm);
+    background: var(--superficie-2);
+    font-size: 14px;
+    color: var(--texto-secundario);
+    font-variant-numeric: tabular-nums;
+}
+.valor-vista-previa > b { color: var(--color-rent); }
+.valor-vista-previa span b { color: var(--texto-principal); }
+#valor-modo { margin-bottom: 14px; }

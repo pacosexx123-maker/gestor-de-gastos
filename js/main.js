@@ -2,17 +2,18 @@ import {
     obtenerFechaHoy, obtenerMesActual, cargarGastosDesdeMemoria, guardarGastosEnMemoria, 
     filtrarMovimientosPorMes, calcularGastos, calcularIngresosNomina, calcularGastoHogar, 
     calcularDesglosePersonal, calcularDesgloseHogar, descargarArchivo
-} from './utils.js?v=15';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, bytesABase64, MIME_EXCEL } from './excel.js?v=15';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=15';
+} from './utils.js?v=17';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, bytesABase64, MIME_EXCEL } from './excel.js?v=17';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=17';
 import { 
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, 
     reemplazarInversiones, generarExcelInversiones 
-} from './inversiones.js?v=15';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=15';
-import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=15';
-import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=15';
-import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=15';
+} from './inversiones.js?v=17';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=17';
+import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=17';
+import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=17';
+import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=17';
+import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=17';
 
 const formulario = document.getElementById('formulario');
 const listaGastosTabla = document.getElementById('lista-gastos');
@@ -464,6 +465,7 @@ function restaurarCopia(datosImportados) {
     } else if (datosImportados && Array.isArray(datosImportados.movimientos)) {
         movimientos = datosImportados.movimientos;
         reemplazarCarteras(Array.isArray(datosImportados.carteras) ? datosImportados.carteras : []);
+        reemplazarValoraciones(datosImportados.valoraciones || {});
         reemplazarInversiones(Array.isArray(datosImportados.inversiones) ? datosImportados.inversiones : []);
     } else {
         return alert('El archivo seleccionado no es válido.');
@@ -609,8 +611,8 @@ iniciarConSeguridad('Archivos', () => iniciarExportaciones({ mostrarToast }));
 iniciarConSeguridad('la importación', () => iniciarImportacionOrdenes({ abrirModal, cerrarModal, mostrarToast, formatoFechaES, alImportar: () => cambiarSeccion('inversiones') }));
 iniciarConSeguridad('las copias de seguridad', () => iniciarCopiaSeguridad({
     abrirModal, cerrarModal, mostrarToast, registrarExportacion,
-    obtenerDatos: () => ({ movimientos, inversiones: obtenerInversiones(), carteras: obtenerCarteras() })
+    obtenerDatos: () => ({ movimientos, inversiones: obtenerInversiones(), carteras: obtenerCarteras(), valoraciones: obtenerValoraciones() })
 }));
-const obtenerDatosApp = () => ({ movimientos, inversiones: obtenerInversiones(), carteras: obtenerCarteras() });
+const obtenerDatosApp = () => ({ movimientos, inversiones: obtenerInversiones(), carteras: obtenerCarteras(), valoraciones: obtenerValoraciones() });
 iniciarConSeguridad('los ajustes', () => iniciarAjustes({ mostrarToast, obtenerDatos: obtenerDatosApp }));
 cambiarSeccion(seccionActiva);

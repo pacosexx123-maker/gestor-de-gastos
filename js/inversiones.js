@@ -1,10 +1,14 @@
 import {
     obtenerFechaHoy, cargarInversionesDesdeMemoria, guardarInversionesEnMemoria,
     calcularTotalInversion, calcularResumenPorActivo, claveActivo, tieneDetalleTitulos
-} from './utils.js?v=15';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha } from './excel.js?v=15';
-import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=15';
-import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros } from './graficos.js?v=15';
+} from './utils.js?v=17';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha } from './excel.js?v=17';
+import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=17';
+import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros } from './graficos.js?v=17';
+import {
+    iniciarValoraciones, abrirValorActual, valorActual, precioActual,
+    rentabilidad, formatoRentabilidad, claseRentabilidad
+} from './valoraciones.js?v=17';
 
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICONO_DESPLEGAR = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -209,10 +213,26 @@ export function renderizarInversiones() {
     const resumen = calcularResumenPorActivo(inversiones);
     const totalInvertido = resumen.reduce((acumulado, activo) => acumulado + activo.total, 0);
 
-    // Tarjetas de totales
+    const grupos = construirGruposDistribucion(resumen, totalInvertido);
+
+    // Tarjetas de totales: lo invertido y lo que vale ahora (los activos sin valorar cuentan por lo invertido)
     document.getElementById('inv-total').textContent = totalInvertido.toFixed(2);
+    let valorTotal = 0, sinValorar = 0;
+    grupos.forEach(g => {
+        if (g.valor === null) { valorTotal += g.total; sinValorar++; } else valorTotal += g.valor;
+    });
+    const rTotal = grupos.length > 0 && sinValorar < grupos.length ? rentabilidad(totalInvertido, valorTotal) : null;
+    const lineaValor = document.getElementById('inv-valor-actual');
+    lineaValor.classList.toggle('oculto', !rTotal);
+    if (rTotal) {
+        document.getElementById('inv-valor-total').textContent = `${valorTotal.toFixed(2)} €`;
+        const etiqueta = document.getElementById('inv-rentabilidad-total');
+        etiqueta.textContent = formatoRentabilidad(rTotal, true);
+        etiqueta.className = `etiqueta-rentabilidad rentabilidad-${claseRentabilidad(rTotal)}`;
+    }
     document.getElementById('inv-num-operaciones').textContent =
-        `${inversiones.length} ${inversiones.length === 1 ? 'aportación' : 'aportaciones'}`;
+        `${inversiones.length} ${inversiones.length === 1 ? 'aportación' : 'aportaciones'}` +
+        (rTotal && sinValorar > 0 ? ` · ${sinValorar} sin valorar` : '');
     document.getElementById('inv-num-activos').textContent = resumen.length;
 
     const ordenadas = inversiones
@@ -223,7 +243,7 @@ export function renderizarInversiones() {
     document.getElementById('inv-ultima-fecha').textContent = ultima ? ayudas.formatoFechaES(ultima.inv.fecha) : '—';
     document.getElementById('inv-ultima-activo').textContent = ultima ? ultima.inv.nombre : 'Sin aportaciones';
 
-    renderizarDistribucion(resumen, totalInvertido);
+    renderizarDistribucion(resumen, totalInvertido, grupos);
 
     // Sugerencias de nombres e ISIN en el formulario
     datalistNombres.innerHTML = resumen.map(a => `<option value="${escaparHTML(a.nombre)}"></option>`).join('');
@@ -265,11 +285,33 @@ function construirGruposDistribucion(resumen, total) {
     [...grupos].sort((a, b) => fechaGrupo(a).localeCompare(fechaGrupo(b)) || a.clave.localeCompare(b.clave))
         .forEach((g, indice) => { g.color = indice < SERIES_DISPONIBLES ? `var(--serie-${indice + 1})` : 'var(--serie-otros)'; });
 
-    grupos.forEach(g => { g.porcentaje = total > 0 ? (g.total / total) * 100 : 0; });
+    grupos.forEach(g => {
+        g.porcentaje = total > 0 ? (g.total / total) * 100 : 0;
+        if (!g.esCartera) {
+            g.valor = valorActual(g.clave, g.participaciones, g.total);
+        } else {
+            g.hijos.forEach(h => { h.valor = valorActual(h.clave, h.participaciones, h.total); });
+            // Una cartera se valora entera o, si no, sumando sus activos (todos deben estar valorados)
+            const valorCartera = valorActual(g.clave, 0, g.total);
+            g.valor = valorCartera !== null ? valorCartera
+                : g.hijos.every(h => h.valor !== null) ? g.hijos.reduce((suma, h) => suma + h.valor, 0) : null;
+        }
+    });
     return grupos.sort((a, b) => b.total - a.total);
 }
 
+// Mapa clave -> datos del activo para la ventana del valor actual
+let activosValorables = {};
+
+function botonRentabilidad(clave, coste, valor) {
+    const r = rentabilidad(coste, valor);
+    if (!r) return `<button class="btn-rentabilidad sin-valor" data-clave="${escaparHTML(clave)}" title="Añadir el valor actual">+ Valor actual</button>`;
+    return `<button class="btn-rentabilidad rentabilidad-${claseRentabilidad(r)}" data-clave="${escaparHTML(clave)}" title="${formatoRentabilidad(r, true)} · tocar para actualizar el valor">${formatoRentabilidad(r)}</button>`;
+}
+
 function filaActivo(activo, porcentaje, color, esHijo = false) {
+    activosValorables[activo.clave] = { clave: activo.clave, nombre: activo.nombre, coste: activo.total, participaciones: activo.participaciones, esCartera: false };
+    const r = rentabilidad(activo.total, activo.valor);
     // Las órdenes importadas sin nombre usan el ISIN como nombre: se muestra "Sin nombre" para completarlo
     const sinNombre = !activo.nombre || activo.nombre === activo.isin;
     return `
@@ -281,14 +323,16 @@ function filaActivo(activo, porcentaje, color, esHijo = false) {
                 ${activo.isin ? `<small class="texto-isin">${escaparHTML(activo.isin)}</small>` : ''}
             </div>
             <div class="activo-datos">
-                <span class="activo-total">${activo.total.toFixed(2)} €</span>
-                <small>${activo.participaciones > 0 ? `${formatoDecimal(activo.participaciones, 6)} part. · ` : ''}${porcentaje.toFixed(1)}%</small>
+                <span class="activo-total">${activo.total.toFixed(2)} € ${botonRentabilidad(activo.clave, activo.total, activo.valor)}</span>
+                <small>${r ? `Vale ${r.valor.toFixed(2)} € · ` : ''}${activo.participaciones > 0 ? `${formatoDecimal(activo.participaciones, 6)} part. · ` : ''}${porcentaje.toFixed(1)}%</small>
             </div>
             <div class="activo-barra"><span style="width: ${porcentaje}%; background: ${color}"></span></div>
         </div>`;
 }
 
 function filaCartera(grupo) {
+    activosValorables[grupo.clave] = { clave: grupo.clave, nombre: grupo.nombre, coste: grupo.total, participaciones: 0, esCartera: true };
+    const r = rentabilidad(grupo.total, grupo.valor);
     const abierta = carterasAbiertas.has(grupo.id);
     const hijos = [...grupo.hijos].sort((a, b) => b.total - a.total)
         .map(h => filaActivo(h, grupo.total > 0 ? (h.total / grupo.total) * 100 : 0, grupo.color, true)).join('');
@@ -302,15 +346,15 @@ function filaCartera(grupo) {
                 <small class="texto-isin">${grupo.hijos.length} ${grupo.hijos.length === 1 ? 'activo' : 'activos'}</small>
             </div>
             <div class="activo-datos">
-                <span class="activo-total">${grupo.total.toFixed(2)} €</span>
-                <small>${grupo.porcentaje.toFixed(1)}%</small>
+                <span class="activo-total">${grupo.total.toFixed(2)} € ${botonRentabilidad(grupo.clave, grupo.total, grupo.valor)}</span>
+                <small>${r ? `Vale ${r.valor.toFixed(2)} € · ` : ''}${grupo.porcentaje.toFixed(1)}%</small>
             </div>
             <div class="activo-barra"><span style="width: ${grupo.porcentaje}%; background: ${grupo.color}"></span></div>
             <div class="cartera-hijos ${abierta ? '' : 'oculto'}">${hijos}</div>
         </div>`;
 }
 
-function renderizarDistribucion(resumen, total) {
+function renderizarDistribucion(resumen, total, grupos) {
     document.querySelectorAll('.selector-grafico button').forEach(btn => {
         const activo = btn.getAttribute('data-modo') === modoDistribucion;
         btn.classList.toggle('activo', activo);
@@ -323,8 +367,6 @@ function renderizarDistribucion(resumen, total) {
         return;
     }
 
-    const grupos = construirGruposDistribucion(resumen, total);
-
     if (modoDistribucion !== 'lista') {
         const elementos = agruparOtros(grupos.map(g => ({ nombre: g.nombre, total: g.total, porcentaje: g.porcentaje, color: g.color })));
         listaActivos.innerHTML = modoDistribucion === 'tarta'
@@ -334,7 +376,12 @@ function renderizarDistribucion(resumen, total) {
         return;
     }
 
+    activosValorables = {};
     listaActivos.innerHTML = grupos.map(g => g.esCartera ? filaCartera(g) : filaActivo(g, g.porcentaje, g.color)).join('');
+
+    listaActivos.querySelectorAll('.btn-rentabilidad').forEach(btn => {
+        btn.addEventListener('click', () => abrirValorActual(activosValorables[btn.getAttribute('data-clave')]));
+    });
 
     listaActivos.querySelectorAll('.btn-renombrar-activo').forEach(btn => {
         btn.addEventListener('click', () => activarEdicionNombre(btn));
@@ -353,6 +400,13 @@ function renderizarDistribucion(resumen, total) {
     listaActivos.querySelectorAll('.btn-editar-cartera-dist').forEach(btn => {
         btn.addEventListener('click', () => abrirEdicionCartera(btn.getAttribute('data-cartera')));
     });
+}
+
+function rentabilidadOperacion(inv) {
+    const precio = precioActual(claveActivo(inv));
+    if (precio === null || !tieneDetalleTitulos(inv)) return '';
+    const r = rentabilidad(calcularTotalInversion(inv), parseFloat(inv.cantidad) * precio);
+    return r ? `<small class="rentabilidad-operacion rentabilidad-${claseRentabilidad(r)}">${formatoRentabilidad(r)}</small>` : '';
 }
 
 function coincideConFiltros(inv) {
@@ -397,7 +451,7 @@ function renderizarOperaciones() {
             <td class="col-cantidad">${cantidad}</td>
             <td class="col-cantidad">${precio}</td>
             <td class="col-cantidad">${comision > 0 ? `${comision.toFixed(2)} €` : '—'}</td>
-            <td class="col-cantidad monto-inversion">${calcularTotalInversion(inv).toFixed(2)} €</td>
+            <td class="col-cantidad monto-inversion">${calcularTotalInversion(inv).toFixed(2)} €${rentabilidadOperacion(inv)}</td>
             <td>
                 <div class="acciones-fila">
                     <button class="btn-editar btn-editar-inversion" data-indice="${indice}" title="Editar">${ICONO_EDITAR}</button>
@@ -506,6 +560,14 @@ export function iniciarInversiones(funcionesAyuda) {
             try { localStorage.setItem('modoDistribucion', modoDistribucion); } catch (error) { /* sin memoria */ }
             renderizarInversiones();
         });
+    });
+
+    iniciarValoraciones({
+        abrirModal: ayudas.abrirModal,
+        cerrarModal: ayudas.cerrarModal,
+        mostrarToast: ayudas.mostrarToast,
+        formatoFechaES: ayudas.formatoFechaES,
+        alCambiar: renderizarInversiones
     });
 
     iniciarCarteras({

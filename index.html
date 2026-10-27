@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=15">
+    <link rel="stylesheet" href="css/style.css?v=17">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -135,6 +135,10 @@
                     <h3>Total invertido</h3>
                 </div>
                 <p class="total-importe"><span id="inv-total">0.00</span> €</p>
+                <div id="inv-valor-actual" class="linea-valor-actual oculto">
+                    <span>Valor actual <b id="inv-valor-total">0.00 €</b></span>
+                    <span id="inv-rentabilidad-total" class="etiqueta-rentabilidad"></span>
+                </div>
                 <span class="total-pie" id="inv-num-operaciones">0 aportaciones</span>
             </div>
             <div class="tarjeta-total bg-activos">
@@ -697,6 +701,36 @@
         </div>
     </div>
 
+    <!-- Modal valor actual de un activo o cartera (para la rentabilidad) -->
+    <div id="modal-valor" class="modal-overlay oculto">
+        <div class="modal-contenido">
+            <div class="cabecera-modal">
+                <div>
+                    <b id="valor-titulo">Valor actual</b>
+                    <small id="valor-resumen" class="subtitulo-modal"></small>
+                </div>
+                <button id="btn-cerrar-valor" class="btn-cerrar" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="control-segmentado control-ancho" id="valor-modo" role="group" aria-label="Cómo indicar el valor">
+                <button type="button" data-valor="precio">Precio</button>
+                <button type="button" data-valor="total">Valor total</button>
+                <button type="button" data-valor="rentabilidad">Rentabilidad</button>
+            </div>
+            <div class="grupo-input">
+                <label for="valor-importe" id="valor-etiqueta">Precio actual por título (€)</label>
+                <input type="number" id="valor-importe" step="any" min="0" inputmode="decimal" placeholder="0.00">
+            </div>
+            <p id="valor-vista-previa" class="valor-vista-previa">Escribe el valor para ver la rentabilidad</p>
+            <p class="texto-ayuda">Cópialo de tu bróker: el valor liquidativo, el valor de mercado de la posición o su rentabilidad. Se guarda solo en este dispositivo: la app no consulta ningún servicio externo.</p>
+            <div class="botones-modal">
+                <button type="button" id="btn-quitar-valor" class="btn-secundario oculto">Quitar</button>
+                <button type="button" id="btn-guardar-valor" class="btn-guardar">Guardar valor</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Notificación -->
     <div id="toast-notificacion" class="toast">Mensaje</div>
 
@@ -722,6 +756,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=15"></script>
+    <script type="module" src="js/main.js?v=17"></script>
 </body>
 </html>
