@@ -3,10 +3,10 @@
 import {
     abrirModalCopia, hayContrasenaGuardada, guardarContrasenaCopia,
     obtenerDiasRecordatorio, fijarDiasRecordatorio, describirUltimaCopia
-} from './copia-seguridad.js?v=15';
+} from './copia-seguridad.js?v=17';
 
 const TEMAS = ['sistema', 'claro', 'oscuro'];
-const CLAVES_DATOS = ['gastos', 'inversiones', 'carteras', 'exportaciones', 'ultimaCopia', 'recordatorioPospuesto',
+const CLAVES_DATOS = ['gastos', 'inversiones', 'carteras', 'valoraciones', 'exportaciones', 'ultimaCopia', 'recordatorioPospuesto',
     'contrasenaCopia', 'diasRecordatorio', 'seccionActiva', 'seccionInicio', 'modoDistribucion'];
 
 let ayudas = {}; // mostrarToast, obtenerDatos (vienen de main.js)
