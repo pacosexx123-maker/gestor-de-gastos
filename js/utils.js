@@ -86,3 +86,39 @@ export function calcularDesgloseHogar(lista, mesAnio) {
     if (bizumHogar > 0) desglose['Devoluciones (Bizum)'] = -bizumHogar; 
     return desglose;
 }
+
+// --- INVERSIONES ---
+export function cargarInversionesDesdeMemoria() {
+    const datosGuardados = localStorage.getItem('inversiones');
+    return datosGuardados ? JSON.parse(datosGuardados) : [];
+}
+
+export function guardarInversionesEnMemoria(listaInversiones) {
+    localStorage.setItem('inversiones', JSON.stringify(listaInversiones));
+}
+
+export function calcularTotalInversion(inv) {
+    return parseFloat(inv.cantidad || 0) * parseFloat(inv.precio || 0);
+}
+
+// Agrupa las aportaciones por activo (nombre), ordenado de mayor a menor importe
+export function calcularResumenPorActivo(lista) {
+    const activos = {};
+    lista.forEach(inv => {
+        const clave = (inv.nombre || 'Sin nombre').trim();
+        if (!activos[clave]) activos[clave] = { nombre: clave, tipo: inv.tipo || 'Otro', participaciones: 0, total: 0 };
+        activos[clave].participaciones += parseFloat(inv.cantidad || 0);
+        activos[clave].total += calcularTotalInversion(inv);
+    });
+    return Object.values(activos).sort((a, b) => b.total - a.total);
+}
+
+export function descargarArchivo(blob, nombreArchivo) {
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.setAttribute('download', nombreArchivo);
+    document.body.appendChild(enlace);
+    enlace.click();
+    document.body.removeChild(enlace);
+}
