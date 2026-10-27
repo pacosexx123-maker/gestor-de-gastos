@@ -1508,3 +1508,14 @@ input:focus, select:focus {
     }
     .modal-ancho::before { margin: 10px auto 0; }
 }
+
+/* Sin barra superior: margen para la zona de la cámara/notch del móvil */
+.app-contenedor { padding-top: calc(28px + env(safe-area-inset-top)); }
+@media (max-width: 560px) { .app-contenedor { padding-top: calc(20px + env(safe-area-inset-top)); } }
+#contenedor-archivos .lista-archivos { border-top: 1px solid var(--borde); }
+
+/* Modo oscuro: el botón + igual que el botón de datos (en lugar de blanco) */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .btn-flotante { background: var(--superficie); color: var(--texto-principal); border: 1px solid var(--borde); }
+}
+:root[data-theme="dark"] .btn-flotante { background: var(--superficie); color: var(--texto-principal); border: 1px solid var(--borde); }

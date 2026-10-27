@@ -1,5 +1,5 @@
-import { descargarArchivo } from './utils.js?v=14';
-import { base64ABytes } from './excel.js?v=14';
+import { descargarArchivo } from './utils.js?v=15';
+import { base64ABytes } from './excel.js?v=15';
 
 const ICONO_DESCARGAR = '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
 const ICONO_ELIMINAR = '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
@@ -123,5 +123,13 @@ export function renderizarExportaciones() {
 
 export function iniciarExportaciones(funcionesAyuda) {
     ayudas = funcionesAyuda;
+
+    // Historial desplegable: cerrado hasta que se pulse la cabecera
+    const contenedor = document.getElementById('contenedor-archivos');
+    const flecha = document.getElementById('icono-flecha-archivos');
+    document.getElementById('cabecera-archivos').addEventListener('click', () => {
+        const abierto = contenedor.classList.toggle('abierto');
+        flecha.style.transform = abierto ? 'rotate(180deg)' : 'rotate(0deg)';
+    });
     renderizarExportaciones();
 }

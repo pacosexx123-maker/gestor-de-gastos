@@ -1,10 +1,10 @@
 import {
     obtenerFechaHoy, cargarInversionesDesdeMemoria, guardarInversionesEnMemoria,
     calcularTotalInversion, calcularResumenPorActivo, claveActivo, tieneDetalleTitulos
-} from './utils.js?v=14';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha } from './excel.js?v=14';
-import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=14';
-import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros } from './graficos.js?v=14';
+} from './utils.js?v=15';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha } from './excel.js?v=15';
+import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=15';
+import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros } from './graficos.js?v=15';
 
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICONO_DESPLEGAR = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';

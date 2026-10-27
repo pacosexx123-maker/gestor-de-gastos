@@ -2,8 +2,8 @@
 // propio navegador), aviso periódico y envío con el menú de compartir del móvil.
 // Los datos solo salen del dispositivo cifrados y por la app que elija el usuario.
 
-import { obtenerFechaHoy, descargarArchivo } from './utils.js?v=14';
-import { bytesABase64, base64ABytes } from './excel.js?v=14';
+import { obtenerFechaHoy, descargarArchivo } from './utils.js?v=15';
+import { bytesABase64, base64ABytes } from './excel.js?v=15';
 
 const FORMATO_CIFRADO = 'gestor-gastos-cifrado';
 const ITERACIONES = 310000;
@@ -29,7 +29,9 @@ const btnRestaurar = document.getElementById('btn-restaurar-copia');
 
 let ayudas = {}; // abrirModal, cerrarModal, mostrarToast, obtenerDatos, registrarExportacion (vienen de main.js)
 let abiertoComoRecordatorio = false;
-let archivoPreparado = null;
+let archivoPreparado = null;   // copia lista tras pedir un segundo toque
+let copiaAnticipada = null;    // copia cifrada por adelantado: { clave, promesa, resultado }
+let temporizadorPreparar = null;
 
 function leer(clave) {
     try { return localStorage.getItem(clave); } catch (error) { return null; }
@@ -46,12 +48,6 @@ function diasRecordatorio() {
 function diasDesdeUltimaCopia() {
     const ultima = leer('ultimaCopia');
     return ultima ? Math.floor((Date.now() - new Date(ultima).getTime()) / UN_DIA) : null;
-}
-
-// Los móviles comparten el archivo (correo, Drive...); en el ordenador se descarga
-function usarMenuCompartir(archivo) {
-    return window.matchMedia('(pointer: coarse)').matches &&
-        !!navigator.canShare && navigator.canShare({ files: [archivo] });
 }
 
 // --- CIFRADO ---
@@ -108,6 +104,7 @@ function actualizarFormulario() {
 export function abrirModalCopia(comoRecordatorio = false) {
     abiertoComoRecordatorio = comoRecordatorio;
     archivoPreparado = null;
+    copiaAnticipada = null; // los datos pueden haber cambiado desde la última vez
     btnCompartir.classList.add('oculto');
     btnGenerar.classList.remove('oculto');
     btnGenerar.disabled = false;
@@ -129,6 +126,7 @@ export function abrirModalCopia(comoRecordatorio = false) {
 
     actualizarFormulario();
     ayudas.abrirModal(modalCopia);
+    prepararPorAdelantado();
 }
 
 function cerrarModalCopia() {
@@ -146,28 +144,89 @@ function copiaCompletada({ archivo, contenido, formato }) {
     escribir('recordatorioPospuesto', null);
     ayudas.registrarExportacion({ nombreArchivo: archivo.name, tipo: 'copia', formato, contenido, mime: 'application/json', codificacion: 'texto' });
     abiertoComoRecordatorio = false;
+    copiaAnticipada = null;
     ayudas.cerrarModal(modalCopia);
     ayudas.mostrarToast('Copia de seguridad guardada');
 }
 
-async function entregar(preparado) {
-    if (!usarMenuCompartir(preparado.archivo)) {
-        descargarArchivo(preparado.archivo, preparado.archivo.name);
-        return copiaCompletada(preparado);
+function textoBotonGenerar() {
+    return window.matchMedia('(pointer: coarse)').matches ? 'Enviar copia de seguridad' : 'Descargar copia de seguridad';
+}
+
+// En el móvil se comparte como .txt: es el tipo de archivo que admiten todos los menús de compartir
+// (Chrome en Android no deja compartir .json). Al importar, la app la reconoce igual.
+function crearArchivos(contenido, base) {
+    return {
+        descarga: new File([contenido], `${base}.json`, { type: 'application/json' }),
+        compartir: new File([contenido], `${base}.txt`, { type: 'text/plain' })
+    };
+}
+
+async function crearCopia(cifrada, contrasena) {
+    const datos = ayudas.obtenerDatos();
+    const fecha = obtenerFechaHoy();
+    if (cifrada) {
+        const contenido = JSON.stringify(await cifrar(JSON.stringify(datos), contrasena));
+        return { contenido, formato: 'CIFRADA', ...crearArchivos(contenido, `copia_cifrada_${fecha}`) };
+    }
+    const contenido = JSON.stringify(datos, null, 2);
+    return { contenido, formato: 'JSON', ...crearArchivos(contenido, `backup_gastos_${fecha}`) };
+}
+
+function claveCopia() {
+    return checkCifrar.checked ? `cifrada|${inputContrasena.value}` : 'sin-cifrar';
+}
+
+function contrasenaValida() {
+    return !checkCifrar.checked || (inputContrasena.value.length >= 6 && inputContrasena.value === inputContrasena2.value);
+}
+
+// Cifrar lleva un momento; se hace antes de pulsar "Enviar" para que el menú de compartir
+// se abra en el mismo toque (los móviles solo lo permiten justo al tocar)
+function prepararPorAdelantado() {
+    clearTimeout(temporizadorPreparar);
+    temporizadorPreparar = setTimeout(() => {
+        if (modalCopia.classList.contains('oculto') || !contrasenaValida()) return;
+        if (!window.crypto || !crypto.subtle) return;
+        const clave = claveCopia();
+        if (copiaAnticipada && copiaAnticipada.clave === clave) return;
+        const anticipada = { clave, resultado: null };
+        anticipada.promesa = crearCopia(checkCifrar.checked, inputContrasena.value)
+            .then(copia => { anticipada.resultado = copia; return copia; })
+            .catch(() => null);
+        copiaAnticipada = anticipada;
+    }, 300);
+}
+
+function mostrarSegundoToque(copia) {
+    archivoPreparado = copia;
+    btnGenerar.classList.add('oculto');
+    btnCompartir.classList.remove('oculto');
+}
+
+async function entregar(copia) {
+    const compartirDisponible = window.matchMedia('(pointer: coarse)').matches &&
+        !!navigator.share && !!navigator.canShare && navigator.canShare({ files: [copia.compartir] });
+
+    if (!compartirDisponible) {
+        descargarArchivo(copia.descarga, copia.descarga.name);
+        return copiaCompletada({ archivo: copia.descarga, contenido: copia.contenido, formato: copia.formato });
     }
     try {
         await navigator.share({
-            files: [preparado.archivo],
+            files: [copia.compartir],
             title: 'Copia de seguridad',
             text: `Copia de seguridad de Gestor de Gastos (${obtenerFechaHoy()})`
         });
-        copiaCompletada(preparado);
+        copiaCompletada({ archivo: copia.compartir, contenido: copia.contenido, formato: copia.formato });
     } catch (error) {
         if (error.name === 'AbortError') return ayudas.mostrarToast('Copia no enviada');
-        // Algunos móviles exigen tocar de nuevo para compartir tras preparar el archivo
-        archivoPreparado = preparado;
-        btnGenerar.classList.add('oculto');
-        btnCompartir.classList.remove('oculto');
+        // El móvil pide tocar otra vez (ha pasado demasiado tiempo desde el toque)
+        if (error.name === 'NotAllowedError' && archivoPreparado !== copia) return mostrarSegundoToque(copia);
+        // Último recurso: descargar el archivo
+        descargarArchivo(copia.descarga, copia.descarga.name);
+        copiaCompletada({ archivo: copia.descarga, contenido: copia.contenido, formato: copia.formato });
+        alert(`No se ha podido abrir el menú de compartir (${error.message || error.name}). La copia se ha descargado en el dispositivo.`);
     }
 }
 
@@ -176,34 +235,35 @@ async function generarCopia(evento) {
     const datos = ayudas.obtenerDatos();
     if (datos.movimientos.length === 0 && datos.inversiones.length === 0) return alert('No hay datos que guardar.');
 
-    const fecha = obtenerFechaHoy();
-    let contenido, nombre, formato;
-
     if (checkCifrar.checked) {
         if (inputContrasena.value.length < 6) return alert('La contraseña debe tener al menos 6 caracteres.');
         if (inputContrasena.value !== inputContrasena2.value) return alert('Las contraseñas no coinciden.');
         if (!window.crypto || !crypto.subtle) return alert('Este navegador no permite cifrar. Abre la app desde su dirección https.');
-
-        btnGenerar.disabled = true;
-        btnGenerar.textContent = 'Cifrando...';
-        try {
-            contenido = JSON.stringify(await cifrar(JSON.stringify(datos), inputContrasena.value));
-        } finally {
-            btnGenerar.disabled = false;
-        }
-        nombre = `copia_cifrada_${fecha}.json`;
-        formato = 'CIFRADA';
         escribir('contrasenaCopia', checkRecordar.checked ? inputContrasena.value : null);
-    } else {
-        contenido = JSON.stringify(datos, null, 2);
-        nombre = `backup_gastos_${fecha}.json`;
-        formato = 'JSON';
     }
 
-    const archivo = new File([contenido], nombre, { type: 'application/json' });
-    await entregar({ archivo, contenido, formato });
-    if (!modalCopia.classList.contains('oculto') && !btnCompartir.classList.contains('oculto')) return;
-    btnGenerar.textContent = window.matchMedia('(pointer: coarse)').matches ? 'Enviar copia de seguridad' : 'Descargar copia de seguridad';
+    try {
+        // Copia ya cifrada por adelantado: se comparte en este mismo toque
+        if (copiaAnticipada && copiaAnticipada.clave === claveCopia() && copiaAnticipada.resultado) {
+            return await entregar(copiaAnticipada.resultado);
+        }
+
+        btnGenerar.disabled = true;
+        btnGenerar.textContent = checkCifrar.checked ? 'Cifrando...' : 'Preparando...';
+        let copia = null;
+        if (copiaAnticipada && copiaAnticipada.clave === claveCopia()) copia = await copiaAnticipada.promesa;
+        if (!copia) copia = await crearCopia(checkCifrar.checked, inputContrasena.value);
+        btnGenerar.disabled = false;
+        btnGenerar.textContent = textoBotonGenerar();
+
+        // Ha habido que esperar: en el móvil se pide un segundo toque para abrir el menú de compartir
+        if (window.matchMedia('(pointer: coarse)').matches && navigator.share) return mostrarSegundoToque(copia);
+        await entregar(copia);
+    } catch (error) {
+        btnGenerar.disabled = false;
+        btnGenerar.textContent = textoBotonGenerar();
+        alert(`No se ha podido crear la copia de seguridad: ${error.message || error}`);
+    }
 }
 
 // --- RESTAURAR UNA COPIA CIFRADA ---
@@ -265,7 +325,9 @@ function comprobarRecordatorio() {
 export function iniciarCopiaSeguridad(funcionesAyuda) {
     ayudas = funcionesAyuda;
 
-    checkCifrar.addEventListener('change', actualizarFormulario);
+    checkCifrar.addEventListener('change', () => { actualizarFormulario(); prepararPorAdelantado(); });
+    inputContrasena.addEventListener('input', prepararPorAdelantado);
+    inputContrasena2.addEventListener('input', prepararPorAdelantado);
     selectFrecuencia.addEventListener('change', () => escribir('diasRecordatorio', selectFrecuencia.value));
     formularioCopia.addEventListener('submit', generarCopia);
     btnCompartir.addEventListener('click', () => { if (archivoPreparado) entregar(archivoPreparado); });

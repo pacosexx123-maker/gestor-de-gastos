@@ -2,17 +2,17 @@ import {
     obtenerFechaHoy, obtenerMesActual, cargarGastosDesdeMemoria, guardarGastosEnMemoria, 
     filtrarMovimientosPorMes, calcularGastos, calcularIngresosNomina, calcularGastoHogar, 
     calcularDesglosePersonal, calcularDesgloseHogar, descargarArchivo
-} from './utils.js?v=14';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, bytesABase64, MIME_EXCEL } from './excel.js?v=14';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=14';
+} from './utils.js?v=15';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, bytesABase64, MIME_EXCEL } from './excel.js?v=15';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=15';
 import { 
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, 
     reemplazarInversiones, generarExcelInversiones 
-} from './inversiones.js?v=14';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=14';
-import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=14';
-import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=14';
-import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=14';
+} from './inversiones.js?v=15';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=15';
+import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=15';
+import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=15';
+import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=15';
 
 const formulario = document.getElementById('formulario');
 const listaGastosTabla = document.getElementById('lista-gastos');
@@ -491,7 +491,7 @@ inputArchivoJson.addEventListener('change', (evento) => {
         inputArchivoJson.value = '';
         return alert('Este formato de Excel antiguo (.xls) no se puede leer. Ábrelo y guárdalo como .xlsx o .csv.');
     }
-    if (['csv', 'xlsx', 'txt'].includes(extension)) {
+    if (['csv', 'xlsx'].includes(extension)) {
         importarOrdenesDesdeArchivo(archivo).finally(() => { inputArchivoJson.value = ''; });
         return;
     }
@@ -499,11 +499,19 @@ inputArchivoJson.addEventListener('change', (evento) => {
     const lector = new FileReader();
     lector.onload = function(e) {
         inputArchivoJson.value = ''; // Limpiar input
+        const texto = String(e.target.result || '').replace(/^\uFEFF/, '').trim();
+
+        // Un .txt puede ser una copia de seguridad (las del móvil se comparten como .txt) o órdenes del bróker
+        if (extension === 'txt' && !texto.startsWith('{') && !texto.startsWith('[')) {
+            importarOrdenesDesdeArchivo(archivo);
+            return;
+        }
+
         let datosImportados;
         try {
-            datosImportados = JSON.parse(e.target.result);
+            datosImportados = JSON.parse(texto);
         } catch (error) {
-            return alert('Error al leer el archivo JSON.');
+            return alert('Error al leer el archivo de la copia de seguridad.');
         }
         if (esCopiaCifrada(datosImportados)) {
             pedirContrasenaYDescifrar(datosImportados).then(datos => { if (datos) restaurarCopia(datos); });
