@@ -902,3 +902,67 @@ input:focus, select:focus {
 @media (max-width: 380px) {
     .marca-nombre { display: none; }
 }
+
+/* =========================================================
+   ISIN e importación de órdenes
+   ========================================================= */
+.texto-isin {
+    font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    font-size: 11px !important;
+    letter-spacing: 0.02em;
+    color: var(--texto-terciario) !important;
+}
+.tabla-inversiones .texto-isin { display: block; margin-top: 4px; }
+
+.subtitulo-modal { display: block; margin-top: 2px; font-size: 13px; color: var(--texto-terciario); }
+.texto-ayuda { margin: 0 0 16px; font-size: 13px; line-height: 1.5; color: var(--texto-secundario); }
+.modal-ancho .texto-ayuda { padding: 0 24px; }
+
+.lista-ordenes { border-top: 1px solid var(--borde); }
+.orden-fila {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--borde);
+    transition: opacity 0.15s;
+}
+.orden-fila.desmarcada { opacity: 0.5; }
+.orden-check {
+    width: 20px;
+    height: 20px;
+    margin: 2px 0 0;
+    padding: 0;
+    flex-shrink: 0;
+    box-shadow: none;
+    accent-color: var(--primario);
+    cursor: pointer;
+}
+.orden-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.orden-cabecera { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; font-size: 14px; }
+.orden-nombre-conocido { font-size: 14px; font-weight: 500; }
+.orden-nombre { height: 38px; font-size: 14px; }
+.orden-info small { font-size: 12px; color: var(--texto-secundario); font-variant-numeric: tabular-nums; }
+.pildora-aviso { background: var(--ultima-suave); color: var(--ultima); border-color: transparent; }
+
+.pie-modal {
+    position: sticky;
+    bottom: 0;
+    padding: 16px 24px 20px;
+    background: var(--superficie);
+    border-top: 1px solid var(--borde);
+}
+.pie-modal .btn-guardar { margin-top: 0; }
+.btn-guardar:disabled { opacity: 0.4; cursor: not-allowed; }
+
+@media (max-width: 560px) {
+    .modal-ancho .texto-ayuda { padding: 0 16px; }
+    .orden-fila { padding: 14px 16px; }
+    .pie-modal { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+}
+
+/* Nombre de activo editable en "Distribución por activo" */
+.activo-nombre.sin-nombre { color: var(--texto-terciario); font-style: italic; font-weight: 500; }
+.btn-renombrar-activo { width: 26px; height: 26px; margin-left: -4px; }
+.btn-renombrar-activo svg { width: 14px; height: 14px; }
+.input-nombre-activo { height: 34px; font-size: 14px; flex: 1 1 180px; min-width: 0; }

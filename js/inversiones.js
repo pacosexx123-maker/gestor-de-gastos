@@ -1,7 +1,8 @@
 import {
     obtenerFechaHoy, cargarInversionesDesdeMemoria, guardarInversionesEnMemoria,
-    calcularTotalInversion, calcularResumenPorActivo
-} from './utils.js?v=4';
+    calcularTotalInversion, calcularResumenPorActivo, claveActivo
+} from './utils.js?v=7';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha } from './excel.js?v=7';
 
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICONO_ELIMINAR = '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
@@ -9,6 +10,7 @@ const ICONO_ELIMINAR = '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"
 const modalInversion = document.getElementById('modal-inversion');
 const formularioInversion = document.getElementById('formulario-inversion');
 const inputNombre = document.getElementById('inv-nombre');
+const inputIsin = document.getElementById('inv-isin');
 const selectTipo = document.getElementById('inv-tipo');
 const inputCantidad = document.getElementById('inv-cantidad');
 const inputPrecio = document.getElementById('inv-precio');
@@ -17,18 +19,23 @@ const displayTotalFormulario = document.getElementById('inv-total-formulario');
 const listaInversionesTabla = document.getElementById('lista-inversiones');
 const listaActivos = document.getElementById('lista-activos');
 const datalistNombres = document.getElementById('lista-nombres-activos');
+const datalistIsin = document.getElementById('lista-isin-activos');
 
 let inversiones = cargarInversionesDesdeMemoria();
 let indiceEditando = null;
 let ayudas = {}; // abrirModal, cerrarModal, mostrarToast, formatoFechaES (vienen de main.js)
 
-function escaparHTML(texto) {
+export function escaparHTML(texto) {
     return String(texto).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 // Participaciones y precios pueden tener muchos decimales (p. ej. valor liquidativo de un fondo)
-function formatoDecimal(numero, maxDecimales) {
+export function formatoDecimal(numero, maxDecimales) {
     return parseFloat(parseFloat(numero || 0).toFixed(maxDecimales)).toString();
+}
+
+export function normalizarIsin(isin) {
+    return String(isin || '').replace(/\s/g, '').toUpperCase();
 }
 
 export function obtenerInversiones() {
@@ -39,6 +46,59 @@ export function reemplazarInversiones(lista) {
     inversiones = lista;
     guardarInversionesEnMemoria(inversiones);
     renderizarInversiones();
+}
+
+// Cambia el nombre de un activo en todas sus aportaciones
+function renombrarActivo(clave, nuevoNombre) {
+    const nombre = nuevoNombre.trim();
+    if (!nombre) return;
+    inversiones.forEach(inv => { if (claveActivo(inv) === clave) inv.nombre = nombre; });
+    guardarInversionesEnMemoria(inversiones);
+    renderizarInversiones();
+    ayudas.mostrarToast('Nombre actualizado');
+}
+
+function activarEdicionNombre(boton) {
+    const fila = boton.closest('.activo-fila');
+    const etiqueta = fila.querySelector('.activo-nombre');
+    const clave = boton.getAttribute('data-clave');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'input-nombre-activo';
+    input.value = etiqueta.classList.contains('sin-nombre') ? '' : etiqueta.textContent;
+    input.placeholder = 'Nombre del fondo / acción';
+    etiqueta.replaceWith(input);
+    boton.classList.add('oculto');
+    input.focus();
+
+    let terminado = false;
+    const terminar = guardar => {
+        if (terminado) return;
+        terminado = true;
+        if (guardar && input.value.trim()) renombrarActivo(clave, input.value);
+        else renderizarInversiones();
+    };
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') terminar(true);
+        if (e.key === 'Escape') terminar(false);
+    });
+    input.addEventListener('blur', () => terminar(true));
+}
+
+export function anadirInversiones(lista) {
+    inversiones.push(...lista);
+    guardarInversionesEnMemoria(inversiones);
+    renderizarInversiones();
+}
+
+// Busca un activo ya registrado (la aportación más reciente) por ISIN o por nombre
+export function buscarActivo({ isin, nombre }) {
+    const isinBuscado = normalizarIsin(isin);
+    const nombreBuscado = String(nombre || '').trim().toLowerCase();
+    const candidatos = ordenarPorFecha(inversiones).reverse();
+    if (isinBuscado) return candidatos.find(inv => normalizarIsin(inv.isin) === isinBuscado) || null;
+    if (nombreBuscado) return candidatos.find(inv => (inv.nombre || '').trim().toLowerCase() === nombreBuscado) || null;
+    return null;
 }
 
 function actualizarTotalFormulario() {
@@ -53,6 +113,7 @@ export function abrirFormularioInversion(indice = null) {
     if (indice !== null) {
         const inv = inversiones[indice];
         inputNombre.value = inv.nombre || '';
+        inputIsin.value = inv.isin || '';
         selectTipo.value = inv.tipo || 'Fondo';
         inputCantidad.value = inv.cantidad || '';
         inputPrecio.value = inv.precio || '';
@@ -99,11 +160,15 @@ export function renderizarInversiones() {
     }
     resumen.forEach(activo => {
         const porcentaje = totalInvertido > 0 ? (activo.total / totalInvertido) * 100 : 0;
+        // Las órdenes importadas sin nombre usan el ISIN como nombre: se muestra "Sin nombre" para completarlo
+        const sinNombre = !activo.nombre || activo.nombre === activo.isin;
         listaActivos.innerHTML += `
             <div class="activo-fila">
                 <div class="activo-info">
-                    <b>${escaparHTML(activo.nombre)}</b>
+                    <b class="activo-nombre ${sinNombre ? 'sin-nombre' : ''}">${sinNombre ? 'Sin nombre' : escaparHTML(activo.nombre)}</b>
+                    <button class="btn-editar btn-renombrar-activo" data-clave="${escaparHTML(activo.clave)}" title="Cambiar nombre">${ICONO_EDITAR}</button>
                     <span class="pildora">${escaparHTML(activo.tipo)}</span>
+                    ${activo.isin ? `<small class="texto-isin">${escaparHTML(activo.isin)}</small>` : ''}
                 </div>
                 <div class="activo-datos">
                     <span class="activo-total">${activo.total.toFixed(2)} €</span>
@@ -113,8 +178,13 @@ export function renderizarInversiones() {
             </div>`;
     });
 
-    // Sugerencias de nombres en el formulario
+    listaActivos.querySelectorAll('.btn-renombrar-activo').forEach(btn => {
+        btn.addEventListener('click', () => activarEdicionNombre(btn));
+    });
+
+    // Sugerencias de nombres e ISIN en el formulario
     datalistNombres.innerHTML = resumen.map(a => `<option value="${escaparHTML(a.nombre)}"></option>`).join('');
+    datalistIsin.innerHTML = resumen.filter(a => a.isin).map(a => `<option value="${escaparHTML(a.isin)}">${escaparHTML(a.nombre)}</option>`).join('');
 
     // Tabla de operaciones (más recientes primero)
     listaInversionesTabla.innerHTML = '';
@@ -131,6 +201,7 @@ export function renderizarInversiones() {
             <td>
                 ${escaparHTML(inv.nombre || 'Sin nombre')}<br>
                 <span class="pildora">${escaparHTML(inv.tipo || 'Otro')}</span>
+                ${inv.isin ? `<small class="texto-isin">${escaparHTML(inv.isin)}</small>` : ''}
                 <small class="detalle-movil">${cantidad} × ${precio} €</small>
             </td>
             <td class="col-cantidad">${cantidad}</td>
@@ -159,13 +230,56 @@ export function renderizarInversiones() {
     });
 }
 
-export function generarCSVInversiones() {
+const COLUMNAS_EXCEL_INVERSIONES = [
+    { titulo: 'Fecha', ancho: 12 },
+    { titulo: 'Activo', ancho: 36 },
+    { titulo: 'ISIN', ancho: 15 },
+    { titulo: 'Tipo', ancho: 10 },
+    { titulo: 'Participaciones', ancho: 16 },
+    { titulo: 'Precio de mercado (€)', ancho: 22 },
+    { titulo: 'Total (€)', ancho: 14 }
+];
+
+function filasExcelInversiones(lista) {
+    const filas = ordenarPorFecha(lista).map(inv => [
+        { v: inv.fecha, tipo: 'fecha' },
+        { v: inv.nombre || 'Sin nombre' },
+        { v: inv.isin || '' },
+        { v: inv.tipo || 'Otro' },
+        { v: inv.cantidad || 0, tipo: 'numero' },
+        { v: inv.precio || 0, tipo: 'dinero' },
+        { v: parseFloat(calcularTotalInversion(inv).toFixed(2)), tipo: 'dinero' }
+    ]);
+    const total = lista.reduce((acumulado, inv) => acumulado + calcularTotalInversion(inv), 0);
+    filas.push([]);
+    filas.push([null, null, null, null, null, { v: 'Total invertido', negrita: true }, { v: parseFloat(total.toFixed(2)), tipo: 'dinero', negrita: true }]);
+    return filas;
+}
+
+// Libro Excel: hoja "Total" con todo + resumen por activo, y una hoja por cada mes
+export function generarExcelInversiones() {
     if (inversiones.length === 0) return null;
-    let csv = '﻿Fecha,Activo,Tipo,Participaciones,Precio de mercado (€),Total (€)\n';
-    inversiones.forEach(inv => {
-        csv += `${ayudas.formatoFechaES(inv.fecha || obtenerFechaHoy())},"${inv.nombre || ''}","${inv.tipo || ''}",${inv.cantidad || 0},${inv.precio || 0},${calcularTotalInversion(inv).toFixed(2)}\n`;
+
+    const filasTotal = filasExcelInversiones(inversiones);
+    filasTotal.push([]);
+    filasTotal.push([null, { v: 'Resumen por activo', negrita: true }]);
+    calcularResumenPorActivo(inversiones).forEach(activo => {
+        filasTotal.push([
+            null,
+            { v: activo.nombre },
+            { v: activo.isin },
+            { v: activo.tipo },
+            { v: parseFloat(activo.participaciones.toFixed(6)), tipo: 'numero' },
+            null,
+            { v: parseFloat(activo.total.toFixed(2)), tipo: 'dinero' }
+        ]);
     });
-    return csv;
+
+    const hojas = [{ nombre: 'Total', columnas: COLUMNAS_EXCEL_INVERSIONES, filas: filasTotal }];
+    agruparPorMes(inversiones).forEach(mes => {
+        hojas.push({ nombre: mes.nombre, columnas: COLUMNAS_EXCEL_INVERSIONES, filas: filasExcelInversiones(mes.elementos) });
+    });
+    return crearLibroExcel(hojas);
 }
 
 export function iniciarInversiones(funcionesAyuda) {
@@ -174,16 +288,29 @@ export function iniciarInversiones(funcionesAyuda) {
     inputCantidad.addEventListener('input', actualizarTotalFormulario);
     inputPrecio.addEventListener('input', actualizarTotalFormulario);
 
-    // Si se elige un activo ya existente, se rellena su tipo automáticamente
-    inputNombre.addEventListener('change', () => {
-        const existente = inversiones.find(inv => (inv.nombre || '').trim() === inputNombre.value.trim());
-        if (existente) selectTipo.value = existente.tipo || 'Fondo';
+    // Activo ya registrado: al escribir su nombre se rellena el ISIN (y al revés), además del tipo
+    inputNombre.addEventListener('input', () => {
+        const existente = buscarActivo({ nombre: inputNombre.value });
+        if (!existente) return;
+        if (existente.isin) inputIsin.value = existente.isin;
+        selectTipo.value = existente.tipo || 'Fondo';
+    });
+
+    inputIsin.addEventListener('input', () => {
+        const posicion = inputIsin.selectionStart;
+        inputIsin.value = normalizarIsin(inputIsin.value);
+        inputIsin.setSelectionRange(posicion, posicion);
+        const existente = buscarActivo({ isin: inputIsin.value });
+        if (!existente) return;
+        inputNombre.value = existente.nombre || '';
+        selectTipo.value = existente.tipo || 'Fondo';
     });
 
     formularioInversion.addEventListener('submit', (evento) => {
         evento.preventDefault();
         const datosInversion = {
             nombre: inputNombre.value.trim(),
+            isin: normalizarIsin(inputIsin.value),
             tipo: selectTipo.value,
             cantidad: parseFloat(inputCantidad.value),
             precio: parseFloat(inputPrecio.value),
