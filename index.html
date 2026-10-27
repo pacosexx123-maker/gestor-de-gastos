@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=7">
+    <link rel="stylesheet" href="css/style.css?v=8">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -413,6 +413,28 @@
     <!-- Notificación -->
     <div id="toast-notificacion" class="toast">Mensaje</div>
 
-    <script type="module" src="js/main.js?v=7"></script>
+    <!-- Si la app no arranca, se muestra el motivo en lugar de "Cargando mes..." -->
+    <script>
+        (function () {
+            var errores = [];
+            window.addEventListener('error', function (e) {
+                errores.push((e.message || 'Error') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : ''));
+            }, true);
+            window.addEventListener('load', function () {
+                setTimeout(function () {
+                    var titulo = document.getElementById('titulo-mes-actual');
+                    if (titulo && titulo.textContent === 'Cargando mes...') {
+                        titulo.textContent = 'La app no ha podido cargar';
+                        titulo.style.fontSize = '20px';
+                        var detalle = document.createElement('p');
+                        detalle.style.cssText = 'font-size:13px;color:#d92d20;margin:8px 0 0;word-break:break-word;text-transform:none';
+                        detalle.textContent = errores.length ? errores.join(' | ') : 'Tu navegador no es compatible. Actualízalo o prueba con otro (Chrome o Safari recientes).';
+                        titulo.parentNode.appendChild(detalle);
+                    }
+                }, 3000);
+            });
+        })();
+    </script>
+    <script type="module" src="js/main.js?v=8"></script>
 </body>
 </html>

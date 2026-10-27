@@ -359,14 +359,14 @@ export async function leerPrimeraHojaExcel(bytes) {
             const nodoValor = elementos(celda, 'v')[0];
             const valor = nodoValor ? nodoValor.textContent : '';
             let resultado;
-            if (tipo === 's') resultado = textosCompartidos[Number(valor)] ?? '';
+            if (tipo === 's') resultado = textosCompartidos[Number(valor)] !== undefined ? textosCompartidos[Number(valor)] : '';
             else if (tipo === 'inlineStr') resultado = textoDe(celda);
             else if (tipo === 'str' || tipo === 'e' || tipo === 'b') resultado = valor;
             else resultado = valor === '' ? '' : Number(valor);
             const referencia = celda.getAttribute('r');
             valores[referencia ? indiceColumna(referencia) : valores.length] = resultado;
         });
-        return Array.from(valores, v => v ?? '');
+        return Array.from(valores, v => (v === undefined || v === null) ? '' : v);
     });
 }
 

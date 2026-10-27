@@ -2,14 +2,14 @@ import {
     obtenerFechaHoy, obtenerMesActual, cargarGastosDesdeMemoria, guardarGastosEnMemoria, 
     filtrarMovimientosPorMes, calcularGastos, calcularIngresosNomina, calcularGastoHogar, 
     calcularDesglosePersonal, calcularDesgloseHogar, descargarArchivo
-} from './utils.js?v=7';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, bytesABase64, MIME_EXCEL } from './excel.js?v=7';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=7';
+} from './utils.js?v=8';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, bytesABase64, MIME_EXCEL } from './excel.js?v=8';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=8';
 import { 
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, 
     reemplazarInversiones, generarExcelInversiones 
-} from './inversiones.js?v=7';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=7';
+} from './inversiones.js?v=8';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=8';
 
 const formulario = document.getElementById('formulario');
 const listaGastosTabla = document.getElementById('lista-gastos');
@@ -473,7 +473,17 @@ modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) c
 
 inputFecha.value = obtenerFechaHoy(); 
 renderizarMovimientos();
-iniciarInversiones({ abrirModal, cerrarModal, mostrarToast, formatoFechaES });
-iniciarExportaciones({ mostrarToast });
-iniciarImportacionOrdenes({ abrirModal, cerrarModal, mostrarToast, formatoFechaES, alImportar: () => cambiarSeccion('inversiones') });
+// Si una sección falla al arrancar (p. ej. por un dato guardado incorrecto), el resto de la app sigue funcionando
+function iniciarConSeguridad(nombre, iniciar) {
+    try {
+        iniciar();
+    } catch (error) {
+        console.error(`Error al iniciar ${nombre}:`, error);
+        mostrarToast(`No se ha podido cargar ${nombre}`);
+    }
+}
+
+iniciarConSeguridad('Inversiones', () => iniciarInversiones({ abrirModal, cerrarModal, mostrarToast, formatoFechaES }));
+iniciarConSeguridad('Archivos', () => iniciarExportaciones({ mostrarToast }));
+iniciarConSeguridad('la importación', () => iniciarImportacionOrdenes({ abrirModal, cerrarModal, mostrarToast, formatoFechaES, alImportar: () => cambiarSeccion('inversiones') }));
 cambiarSeccion(seccionActiva);

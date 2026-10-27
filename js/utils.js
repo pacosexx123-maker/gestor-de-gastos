@@ -103,7 +103,7 @@ export function calcularTotalInversion(inv) {
 
 // Clave de un activo: su ISIN si lo tiene; si no, su nombre
 export function claveActivo(inv) {
-    return inv.isin ? inv.isin.toUpperCase() : (inv.nombre || 'Sin nombre').trim().toLowerCase();
+    return inv.isin ? String(inv.isin).toUpperCase() : String(inv.nombre || 'Sin nombre').trim().toLowerCase();
 }
 
 // Agrupa las aportaciones por activo (ISIN o nombre), ordenado de mayor a menor importe
@@ -111,7 +111,7 @@ export function calcularResumenPorActivo(lista) {
     const activos = {};
     lista.forEach(inv => {
         const clave = claveActivo(inv);
-        if (!activos[clave]) activos[clave] = { clave, nombre: (inv.nombre || 'Sin nombre').trim(), isin: inv.isin || '', tipo: inv.tipo || 'Otro', participaciones: 0, total: 0 };
+        if (!activos[clave]) activos[clave] = { clave, nombre: String(inv.nombre || 'Sin nombre').trim(), isin: inv.isin ? String(inv.isin) : '', tipo: inv.tipo || 'Otro', participaciones: 0, total: 0 };
         activos[clave].participaciones += parseFloat(inv.cantidad || 0);
         activos[clave].total += calcularTotalInversion(inv);
     });
