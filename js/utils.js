@@ -102,8 +102,14 @@ export function calcularValorTitulos(inv) {
     return parseFloat(inv.cantidad || 0) * parseFloat(inv.precio || 0);
 }
 
+export function tieneDetalleTitulos(inv) {
+    return parseFloat(inv.cantidad) > 0 && parseFloat(inv.precio) > 0;
+}
+
 // Lo que realmente se ha pagado: títulos × precio + comisión
+// (o el importe total, si la inversión se añadió solo con lo pagado)
 export function calcularTotalInversion(inv) {
+    if (!tieneDetalleTitulos(inv)) return parseFloat(inv.importe || 0);
     return calcularValorTitulos(inv) + parseFloat(inv.comision || 0);
 }
 

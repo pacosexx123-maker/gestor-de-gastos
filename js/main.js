@@ -2,15 +2,17 @@ import {
     obtenerFechaHoy, obtenerMesActual, cargarGastosDesdeMemoria, guardarGastosEnMemoria, 
     filtrarMovimientosPorMes, calcularGastos, calcularIngresosNomina, calcularGastoHogar, 
     calcularDesglosePersonal, calcularDesgloseHogar, descargarArchivo
-} from './utils.js?v=11';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, bytesABase64, MIME_EXCEL } from './excel.js?v=11';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=11';
+} from './utils.js?v=14';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, bytesABase64, MIME_EXCEL } from './excel.js?v=14';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=14';
 import { 
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, 
     reemplazarInversiones, generarExcelInversiones 
-} from './inversiones.js?v=11';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=11';
-import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=11';
+} from './inversiones.js?v=14';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=14';
+import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=14';
+import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=14';
+import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=14';
 
 const formulario = document.getElementById('formulario');
 const listaGastosTabla = document.getElementById('lista-gastos');
@@ -63,8 +65,11 @@ document.getElementById('btn-mes-anterior').addEventListener('click', () => camb
 document.getElementById('btn-mes-siguiente').addEventListener('click', () => cambiarMesActivo(1));
 
 // NAVEGACIÓN ENTRE SECCIONES (barra inferior)
-const SECCIONES = ['gastos', 'inversiones', 'archivos'];
-let seccionActiva = SECCIONES.includes(localStorage.getItem('seccionActiva')) ? localStorage.getItem('seccionActiva') : 'gastos';
+const SECCIONES = ['gastos', 'inversiones', 'archivos', 'ajustes'];
+// Pantalla al abrir: la elegida en Ajustes o, por defecto, la última que se usó
+const seccionInicio = localStorage.getItem('seccionInicio');
+const seccionGuardada = SECCIONES.includes(seccionInicio) ? seccionInicio : localStorage.getItem('seccionActiva');
+let seccionActiva = SECCIONES.includes(seccionGuardada) ? seccionGuardada : 'gastos';
 
 function cambiarSeccion(seccion) {
     const anterior = seccionActiva;
@@ -83,16 +88,90 @@ function cambiarSeccion(seccion) {
     document.querySelectorAll('.nav-item').forEach(btn => {
         btn.classList.toggle('activo', btn.getAttribute('data-seccion') === seccion);
     });
-    // En la pestaña de archivos no hay nada que añadir
+    // En Archivos y Ajustes no hay nada que añadir
     const btnFlotante = document.getElementById('btn-abrir-formulario');
-    btnFlotante.classList.toggle('oculto', seccion === 'archivos');
+    btnFlotante.classList.toggle('oculto', seccion === 'archivos' || seccion === 'ajustes');
+    if (seccion === 'ajustes') { try { renderizarAjustes(); } catch (error) { console.error(error); } }
     btnFlotante.title = seccion === 'inversiones' ? 'Nueva inversión' : 'Nuevo movimiento';
     document.getElementById('texto-btn-flotante').textContent = btnFlotante.title;
+    document.getElementById('texto-exportar-seccion').textContent = seccion === 'inversiones' ? 'Inversiones (.xlsx)' : 'Gastos (.xlsx)';
+    cerrarMenuDatos();
     window.scrollTo(0, 0);
 }
 
 document.querySelectorAll('.nav-item').forEach(btn => {
     btn.addEventListener('click', () => cambiarSeccion(btn.getAttribute('data-seccion')));
+});
+
+// MENÚ DE DATOS (botón opuesto al +): exportar, copia de seguridad e importar
+const btnMenuDatos = document.getElementById('btn-menu-datos');
+const menuDatos = document.getElementById('menu-datos');
+
+function cerrarMenuDatos() {
+    menuDatos.classList.add('oculto');
+    btnMenuDatos.setAttribute('aria-expanded', 'false');
+    btnMenuDatos.classList.remove('abierto');
+}
+
+btnMenuDatos.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const abrir = menuDatos.classList.contains('oculto');
+    menuDatos.classList.toggle('oculto', !abrir);
+    btnMenuDatos.setAttribute('aria-expanded', String(abrir));
+    btnMenuDatos.classList.toggle('abierto', abrir);
+});
+// Cada opción hace su acción (sus propios eventos) y después se cierra el menú
+menuDatos.querySelectorAll('.menu-opcion').forEach(opcion => opcion.addEventListener('click', cerrarMenuDatos));
+document.addEventListener('click', (e) => {
+    if (!menuDatos.classList.contains('oculto') && !menuDatos.contains(e.target)) cerrarMenuDatos();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarMenuDatos(); });
+
+// DESLIZAR HACIA ABAJO UNA VENTANA PARA CERRARLA (igual que la X)
+let arrastreVentana = null;
+
+document.addEventListener('touchstart', e => {
+    arrastreVentana = null;
+    const contenido = e.target.closest('.modal-overlay:not(.oculto) .modal-contenido');
+    if (!contenido || e.touches.length !== 1 || contenido.scrollTop > 0) return;
+    if (e.target.closest('input, select, textarea')) return;
+    arrastreVentana = { contenido, inicioY: e.touches[0].clientY, desplazamiento: 0, tiempo: Date.now(), activo: false };
+}, {passive: true});
+
+document.addEventListener('touchmove', e => {
+    if (!arrastreVentana) return;
+    const dy = e.touches[0].clientY - arrastreVentana.inicioY;
+    if (!arrastreVentana.activo) {
+        // Solo si se arrastra hacia abajo con la ventana en su parte superior; hacia arriba es scroll normal
+        if (dy < -4 || arrastreVentana.contenido.scrollTop > 0) { arrastreVentana = null; return; }
+        if (dy < 8) return;
+        arrastreVentana.activo = true;
+        arrastreVentana.contenido.style.transition = 'none';
+    }
+    arrastreVentana.desplazamiento = Math.max(0, dy);
+    arrastreVentana.contenido.style.transform = `translateY(${arrastreVentana.desplazamiento}px)`;
+    if (e.cancelable) e.preventDefault();
+}, {passive: false});
+
+document.addEventListener('touchend', () => {
+    if (!arrastreVentana || !arrastreVentana.activo) { arrastreVentana = null; return; }
+    const { contenido, desplazamiento, tiempo } = arrastreVentana;
+    arrastreVentana = null;
+    const rapido = desplazamiento > 50 && Date.now() - tiempo < 300;
+    contenido.style.transition = 'transform 0.2s ease';
+    if (desplazamiento > 110 || rapido) {
+        contenido.style.transform = 'translateY(100%)';
+        setTimeout(() => {
+            const ventana = contenido.closest('.modal-overlay');
+            const botonCerrar = ventana.querySelector('.btn-cerrar');
+            if (botonCerrar) botonCerrar.click(); else cerrarModal(ventana);
+            contenido.style.transform = '';
+            contenido.style.transition = '';
+        }, 180);
+    } else {
+        contenido.style.transform = '';
+        setTimeout(() => { contenido.style.transition = ''; }, 200);
+    }
 });
 
 // DESLIZAR HACIA LOS LADOS PARA CAMBIAR DE SECCIÓN
@@ -384,6 +463,7 @@ function restaurarCopia(datosImportados) {
         movimientos = datosImportados;
     } else if (datosImportados && Array.isArray(datosImportados.movimientos)) {
         movimientos = datosImportados.movimientos;
+        reemplazarCarteras(Array.isArray(datosImportados.carteras) ? datosImportados.carteras : []);
         reemplazarInversiones(Array.isArray(datosImportados.inversiones) ? datosImportados.inversiones : []);
     } else {
         return alert('El archivo seleccionado no es válido.');
@@ -521,6 +601,8 @@ iniciarConSeguridad('Archivos', () => iniciarExportaciones({ mostrarToast }));
 iniciarConSeguridad('la importación', () => iniciarImportacionOrdenes({ abrirModal, cerrarModal, mostrarToast, formatoFechaES, alImportar: () => cambiarSeccion('inversiones') }));
 iniciarConSeguridad('las copias de seguridad', () => iniciarCopiaSeguridad({
     abrirModal, cerrarModal, mostrarToast, registrarExportacion,
-    obtenerDatos: () => ({ movimientos, inversiones: obtenerInversiones() })
+    obtenerDatos: () => ({ movimientos, inversiones: obtenerInversiones(), carteras: obtenerCarteras() })
 }));
+const obtenerDatosApp = () => ({ movimientos, inversiones: obtenerInversiones(), carteras: obtenerCarteras() });
+iniciarConSeguridad('los ajustes', () => iniciarAjustes({ mostrarToast, obtenerDatos: obtenerDatosApp }));
 cambiarSeccion(seccionActiva);
