@@ -1,8 +1,13 @@
 import { 
     obtenerFechaHoy, obtenerMesActual, cargarGastosDesdeMemoria, guardarGastosEnMemoria, 
     filtrarMovimientosPorMes, calcularGastos, calcularIngresosNomina, calcularGastoHogar, 
-    calcularDesglosePersonal, calcularDesgloseHogar 
-} from './utils.js?v=2';
+    calcularDesglosePersonal, calcularDesgloseHogar, descargarArchivo
+} from './utils.js?v=4';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=4';
+import { 
+    iniciarInversiones, abrirFormularioInversion, obtenerInversiones, 
+    reemplazarInversiones, generarCSVInversiones 
+} from './inversiones.js?v=4';
 
 const formulario = document.getElementById('formulario');
 const listaGastosTabla = document.getElementById('lista-gastos');
@@ -53,6 +58,29 @@ function cambiarMesActivo(incremento) {
 
 document.getElementById('btn-mes-anterior').addEventListener('click', () => cambiarMesActivo(-1));
 document.getElementById('btn-mes-siguiente').addEventListener('click', () => cambiarMesActivo(1));
+
+// NAVEGACIÓN ENTRE SECCIONES (barra inferior)
+const SECCIONES = ['gastos', 'inversiones', 'archivos'];
+let seccionActiva = SECCIONES.includes(localStorage.getItem('seccionActiva')) ? localStorage.getItem('seccionActiva') : 'gastos';
+
+function cambiarSeccion(seccion) {
+    seccionActiva = seccion;
+    localStorage.setItem('seccionActiva', seccion);
+    SECCIONES.forEach(s => document.getElementById(`seccion-${s}`).classList.toggle('oculto', s !== seccion));
+    document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.classList.toggle('activo', btn.getAttribute('data-seccion') === seccion);
+    });
+    // En la pestaña de archivos no hay nada que añadir
+    const btnFlotante = document.getElementById('btn-abrir-formulario');
+    btnFlotante.classList.toggle('oculto', seccion === 'archivos');
+    btnFlotante.title = seccion === 'inversiones' ? 'Nueva inversión' : 'Nuevo movimiento';
+    document.getElementById('texto-btn-flotante').textContent = btnFlotante.title;
+    window.scrollTo(0, 0);
+}
+
+document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.addEventListener('click', () => cambiarSeccion(btn.getAttribute('data-seccion')));
+});
 
 // ACORDEÓN HISTORIAL
 const cabeceraHistorial = document.getElementById('cabecera-historial');
@@ -295,18 +323,23 @@ formulario.addEventListener('submit', function(evento) {
     resetearFormularioYModal();
 });
 
-// --- EXPORTAR COPIA DE SEGURIDAD (JSON) ---
+// Descarga el archivo y lo deja anotado en la pestaña "Archivos"
+function exportarYRegistrar({ contenido, mime, nombreArchivo, tipo, formato }) {
+    descargarArchivo(new Blob([contenido], { type: mime }), nombreArchivo);
+    registrarExportacion({ nombreArchivo, tipo, formato, contenido, mime });
+}
+
+// --- EXPORTAR COPIA DE SEGURIDAD (JSON): gastos e inversiones ---
 document.getElementById('btn-exportar-json').addEventListener('click', () => {
-    if(movimientos.length === 0) return alert('No hay datos que exportar.');
-    const datosJSON = JSON.stringify(movimientos, null, 2);
-    const blob = new Blob([datosJSON], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const enlace = document.createElement('a');
-    enlace.href = url;
-    enlace.setAttribute('download', `backup_gastos_${obtenerFechaHoy()}.json`);
-    document.body.appendChild(enlace);
-    enlace.click();
-    document.body.removeChild(enlace);
+    const inversiones = obtenerInversiones();
+    if(movimientos.length === 0 && inversiones.length === 0) return alert('No hay datos que exportar.');
+    exportarYRegistrar({
+        contenido: JSON.stringify({ movimientos, inversiones }, null, 2),
+        mime: 'application/json',
+        nombreArchivo: `backup_gastos_${obtenerFechaHoy()}.json`,
+        tipo: 'copia',
+        formato: 'JSON'
+    });
     mostrarToast('Copia de seguridad guardada');
 });
 
@@ -327,9 +360,16 @@ inputArchivoJson.addEventListener('change', (evento) => {
         try {
             const datosImportados = JSON.parse(e.target.result);
             if (Array.isArray(datosImportados)) {
+                // Copias antiguas: solo contienen los movimientos de gastos
                 movimientos = datosImportados;
                 guardarGastosEnMemoria(movimientos);
                 renderizarMovimientos();
+                mostrarToast('Copia restaurada con éxito');
+            } else if (datosImportados && Array.isArray(datosImportados.movimientos)) {
+                movimientos = datosImportados.movimientos;
+                guardarGastosEnMemoria(movimientos);
+                renderizarMovimientos();
+                reemplazarInversiones(Array.isArray(datosImportados.inversiones) ? datosImportados.inversiones : []);
                 mostrarToast('Copia restaurada con éxito');
             } else {
                 alert('El archivo seleccionado no es válido.');
@@ -342,23 +382,37 @@ inputArchivoJson.addEventListener('change', (evento) => {
     lector.readAsText(archivo);
 });
 
-// --- EXPORTAR EXCEL (CSV) ---
+// --- EXPORTAR EXCEL (CSV): exporta la sección activa ---
 document.getElementById('btn-exportar').addEventListener('click', () => {
+    if (seccionActiva === 'inversiones') {
+        const csvInversiones = generarCSVInversiones();
+        if (!csvInversiones) return alert('No hay inversiones que exportar.');
+        exportarYRegistrar({
+            contenido: csvInversiones,
+            mime: 'text/csv;charset=utf-8;',
+            nombreArchivo: `TusInversiones_${obtenerFechaHoy()}.csv`,
+            tipo: 'inversiones',
+            formato: 'CSV'
+        });
+        return mostrarToast('Inversiones exportadas');
+    }
     if(movimientos.length === 0) return alert('No hay movimientos que exportar.');
     let csv = '\uFEFFFecha,Tipo,Categoría,Concepto,Cantidad (€)\n';
     movimientos.forEach(m => {
         csv += `${formatoFechaES(m.fecha || obtenerFechaHoy())},${m.tipo || 'gasto'},"${m.categoria || ''}","${m.concepto || ''}",${m.cantidad || 0}\n`;
     });
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-    const enlace = document.createElement('a');
-    enlace.href = url;
-    enlace.setAttribute('download', `TusGastos_${obtenerFechaHoy()}.csv`);
-    document.body.appendChild(enlace);
-    enlace.click();
-    document.body.removeChild(enlace);
+    exportarYRegistrar({
+        contenido: csv,
+        mime: 'text/csv;charset=utf-8;',
+        nombreArchivo: `TusGastos_${obtenerFechaHoy()}.csv`,
+        tipo: 'gastos',
+        formato: 'CSV'
+    });
+    mostrarToast('Gastos exportados');
 });
 
 document.getElementById('btn-abrir-formulario').addEventListener('click', () => { 
+    if (seccionActiva === 'inversiones') return abrirFormularioInversion();
     resetearFormularioYModal(); 
     abrirModal(contenedorFormulario); 
 });
@@ -370,3 +424,6 @@ modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) c
 
 inputFecha.value = obtenerFechaHoy(); 
 renderizarMovimientos();
+iniciarInversiones({ abrirModal, cerrarModal, mostrarToast, formatoFechaES });
+iniciarExportaciones({ mostrarToast });
+cambiarSeccion(seccionActiva);
