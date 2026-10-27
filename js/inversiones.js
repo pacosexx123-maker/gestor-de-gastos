@@ -1,8 +1,8 @@
 import {
     obtenerFechaHoy, cargarInversionesDesdeMemoria, guardarInversionesEnMemoria,
     calcularTotalInversion, calcularResumenPorActivo, claveActivo
-} from './utils.js?v=8';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha } from './excel.js?v=8';
+} from './utils.js?v=11';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha } from './excel.js?v=11';
 
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICONO_ELIMINAR = '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
@@ -20,9 +20,17 @@ const listaInversionesTabla = document.getElementById('lista-inversiones');
 const listaActivos = document.getElementById('lista-activos');
 const datalistNombres = document.getElementById('lista-nombres-activos');
 const datalistIsin = document.getElementById('lista-isin-activos');
+const inputComision = document.getElementById('inv-comision');
+const inputImporteFinal = document.getElementById('inv-importe-final');
+const displayDesglose = document.getElementById('inv-desglose-formulario');
+const errorComision = document.getElementById('inv-error-comision');
+const resumenOperaciones = document.getElementById('resumen-operaciones');
+const filtroNombre = document.getElementById('filtro-inv-nombre');
+const filtroTipo = document.getElementById('filtro-inv-tipo');
 
 let inversiones = cargarInversionesDesdeMemoria();
 let indiceEditando = null;
+let ultimoEditado = 'comision'; // 'comision' o 'final': el que escribió el usuario manda sobre el otro
 let ayudas = {}; // abrirModal, cerrarModal, mostrarToast, formatoFechaES (vienen de main.js)
 
 export function escaparHTML(texto) {
@@ -101,14 +109,39 @@ export function buscarActivo({ isin, nombre }) {
     return null;
 }
 
-function actualizarTotalFormulario() {
-    const total = parseFloat(inputCantidad.value || 0) * parseFloat(inputPrecio.value || 0);
-    displayTotalFormulario.textContent = total.toFixed(2);
+function redondear(numero) {
+    return Math.round(numero * 100) / 100;
+}
+
+// Comisión e importe final se calculan uno a partir del otro:
+//   importe final = títulos × precio + comisión   <->   comisión = importe final − títulos × precio
+function recalcularImportes(origen) {
+    if (origen === 'comision' || origen === 'final') ultimoEditado = origen;
+    const cantidad = parseFloat(inputCantidad.value);
+    const precio = parseFloat(inputPrecio.value);
+    const hayValor = cantidad > 0 && precio > 0;
+    const valor = hayValor ? cantidad * precio : 0;
+
+    let comision;
+    if (ultimoEditado === 'final' && inputImporteFinal.value !== '') {
+        comision = parseFloat(inputImporteFinal.value) - valor;
+        if (origen !== 'comision') inputComision.value = hayValor ? String(redondear(comision)) : '';
+    } else {
+        comision = parseFloat(inputComision.value || 0);
+        if (origen !== 'final') inputImporteFinal.value = hayValor ? (valor + comision).toFixed(2) : '';
+    }
+
+    const comisionNegativa = hayValor && comision < -0.005;
+    errorComision.classList.toggle('oculto', !comisionNegativa);
+    displayTotalFormulario.textContent = (valor + comision).toFixed(2);
+    displayDesglose.textContent = `${valor.toFixed(2)} € en títulos + ${redondear(comision).toFixed(2)} € de comisión`;
+    return { valor, comision: redondear(comision), comisionNegativa };
 }
 
 export function abrirFormularioInversion(indice = null) {
     formularioInversion.reset();
     indiceEditando = indice;
+    ultimoEditado = 'comision';
 
     if (indice !== null) {
         const inv = inversiones[indice];
@@ -117,6 +150,7 @@ export function abrirFormularioInversion(indice = null) {
         selectTipo.value = inv.tipo || 'Fondo';
         inputCantidad.value = inv.cantidad || '';
         inputPrecio.value = inv.precio || '';
+        inputComision.value = parseFloat(inv.comision || 0) > 0 ? inv.comision : '';
         inputFecha.value = inv.fecha || obtenerFechaHoy();
         document.getElementById('titulo-form-inversion').textContent = 'Editar Inversión';
         document.getElementById('btn-guardar-inversion').textContent = 'Actualizar Inversión';
@@ -126,7 +160,7 @@ export function abrirFormularioInversion(indice = null) {
         document.getElementById('btn-guardar-inversion').textContent = 'Guardar Inversión';
     }
 
-    actualizarTotalFormulario();
+    recalcularImportes();
     ayudas.abrirModal(modalInversion);
 }
 
@@ -186,14 +220,37 @@ export function renderizarInversiones() {
     datalistNombres.innerHTML = resumen.map(a => `<option value="${escaparHTML(a.nombre)}"></option>`).join('');
     datalistIsin.innerHTML = resumen.filter(a => a.isin).map(a => `<option value="${escaparHTML(a.isin)}">${escaparHTML(a.nombre)}</option>`).join('');
 
-    // Tabla de operaciones (más recientes primero)
+    renderizarOperaciones();
+}
+
+function coincideConFiltros(inv) {
+    const texto = filtroNombre.value.trim().toLowerCase();
+    const tipo = filtroTipo.value;
+    if (tipo && (inv.tipo || 'Otro') !== tipo) return false;
+    if (!texto) return true;
+    return String(inv.nombre || '').toLowerCase().includes(texto) || String(inv.isin || '').toLowerCase().includes(texto);
+}
+
+// Tabla de operaciones (más recientes primero), con filtros por nombre/ISIN y tipo
+function renderizarOperaciones() {
+    const ordenadas = inversiones
+        .map((inv, indice) => ({ inv, indice }))
+        .sort((a, b) => (b.inv.fecha || '').localeCompare(a.inv.fecha || ''));
+    const visibles = ordenadas.filter(({ inv }) => coincideConFiltros(inv));
+
+    const total = ordenadas.length;
+    const textoTotal = `${total} ${total === 1 ? 'operación' : 'operaciones'}`;
+    resumenOperaciones.textContent = visibles.length === total ? textoTotal : `${visibles.length} de ${textoTotal}`;
+
     listaInversionesTabla.innerHTML = '';
-    if (ordenadas.length === 0) {
-        listaInversionesTabla.innerHTML = '<tr><td colspan="6" class="estado-vacio">No hay operaciones registradas</td></tr>';
+    if (visibles.length === 0) {
+        const mensaje = total === 0 ? 'No hay operaciones registradas' : 'Ninguna operación coincide con el filtro';
+        listaInversionesTabla.innerHTML = `<tr><td colspan="7" class="estado-vacio">${mensaje}</td></tr>`;
     }
-    ordenadas.forEach(({ inv, indice }) => {
+    visibles.forEach(({ inv, indice }) => {
         const cantidad = formatoDecimal(inv.cantidad, 6);
         const precio = formatoDecimal(inv.precio, 4);
+        const comision = parseFloat(inv.comision || 0);
         const fechaEspanol = ayudas.formatoFechaES(inv.fecha || obtenerFechaHoy());
         const fila = document.createElement('tr');
         fila.innerHTML = `
@@ -202,10 +259,11 @@ export function renderizarInversiones() {
                 ${escaparHTML(inv.nombre || 'Sin nombre')}<br>
                 <span class="pildora">${escaparHTML(inv.tipo || 'Otro')}</span>
                 ${inv.isin ? `<small class="texto-isin">${escaparHTML(inv.isin)}</small>` : ''}
-                <small class="detalle-movil">${cantidad} × ${precio} €</small>
+                <small class="detalle-movil">${cantidad} × ${precio} €${comision > 0 ? ` + ${comision.toFixed(2)} € com.` : ''}</small>
             </td>
             <td class="col-cantidad">${cantidad}</td>
             <td class="col-cantidad">${precio} €</td>
+            <td class="col-cantidad">${comision > 0 ? `${comision.toFixed(2)} €` : '—'}</td>
             <td class="col-cantidad monto-inversion">${calcularTotalInversion(inv).toFixed(2)} €</td>
             <td>
                 <div class="acciones-fila">
@@ -235,9 +293,10 @@ const COLUMNAS_EXCEL_INVERSIONES = [
     { titulo: 'Activo', ancho: 36 },
     { titulo: 'ISIN', ancho: 15 },
     { titulo: 'Tipo', ancho: 10 },
-    { titulo: 'Participaciones', ancho: 16 },
-    { titulo: 'Precio de mercado (€)', ancho: 22 },
-    { titulo: 'Total (€)', ancho: 14 }
+    { titulo: 'Títulos', ancho: 12 },
+    { titulo: 'Precio por título (€)', ancho: 20 },
+    { titulo: 'Comisión (€)', ancho: 14 },
+    { titulo: 'Total pagado (€)', ancho: 17 }
 ];
 
 function filasExcelInversiones(lista) {
@@ -248,11 +307,14 @@ function filasExcelInversiones(lista) {
         { v: inv.tipo || 'Otro' },
         { v: inv.cantidad || 0, tipo: 'numero' },
         { v: inv.precio || 0, tipo: 'dinero' },
+        { v: parseFloat(inv.comision || 0), tipo: 'dinero' },
         { v: parseFloat(calcularTotalInversion(inv).toFixed(2)), tipo: 'dinero' }
     ]);
     const total = lista.reduce((acumulado, inv) => acumulado + calcularTotalInversion(inv), 0);
+    const comisiones = lista.reduce((acumulado, inv) => acumulado + parseFloat(inv.comision || 0), 0);
     filas.push([]);
-    filas.push([null, null, null, null, null, { v: 'Total invertido', negrita: true }, { v: parseFloat(total.toFixed(2)), tipo: 'dinero', negrita: true }]);
+    filas.push([null, null, null, null, null, { v: 'Total comisiones', negrita: true }, { v: parseFloat(comisiones.toFixed(2)), tipo: 'dinero', negrita: true }]);
+    filas.push([null, null, null, null, null, { v: 'Total invertido', negrita: true }, null, { v: parseFloat(total.toFixed(2)), tipo: 'dinero', negrita: true }]);
     return filas;
 }
 
@@ -271,6 +333,7 @@ export function generarExcelInversiones() {
             { v: activo.tipo },
             { v: parseFloat(activo.participaciones.toFixed(6)), tipo: 'numero' },
             null,
+            null,
             { v: parseFloat(activo.total.toFixed(2)), tipo: 'dinero' }
         ]);
     });
@@ -285,8 +348,20 @@ export function generarExcelInversiones() {
 export function iniciarInversiones(funcionesAyuda) {
     ayudas = funcionesAyuda;
 
-    inputCantidad.addEventListener('input', actualizarTotalFormulario);
-    inputPrecio.addEventListener('input', actualizarTotalFormulario);
+    inputCantidad.addEventListener('input', () => recalcularImportes());
+    inputPrecio.addEventListener('input', () => recalcularImportes());
+    inputComision.addEventListener('input', () => recalcularImportes('comision'));
+    inputImporteFinal.addEventListener('input', () => recalcularImportes('final'));
+
+    // Operaciones: desplegable (cerrado al empezar) con filtros
+    const contenedorOperaciones = document.getElementById('contenedor-operaciones');
+    const flechaOperaciones = document.getElementById('icono-flecha-operaciones');
+    document.getElementById('cabecera-operaciones').addEventListener('click', () => {
+        const abierto = contenedorOperaciones.classList.toggle('abierto');
+        flechaOperaciones.style.transform = abierto ? 'rotate(180deg)' : 'rotate(0deg)';
+    });
+    filtroNombre.addEventListener('input', renderizarOperaciones);
+    filtroTipo.addEventListener('change', renderizarOperaciones);
 
     // Activo ya registrado: al escribir su nombre se rellena el ISIN (y al revés), además del tipo
     inputNombre.addEventListener('input', () => {
@@ -308,12 +383,15 @@ export function iniciarInversiones(funcionesAyuda) {
 
     formularioInversion.addEventListener('submit', (evento) => {
         evento.preventDefault();
+        const { comision, comisionNegativa } = recalcularImportes();
+        if (comisionNegativa) return inputImporteFinal.focus();
         const datosInversion = {
             nombre: inputNombre.value.trim(),
             isin: normalizarIsin(inputIsin.value),
             tipo: selectTipo.value,
             cantidad: parseFloat(inputCantidad.value),
             precio: parseFloat(inputPrecio.value),
+            comision: Math.max(0, comision),
             fecha: inputFecha.value
         };
 
