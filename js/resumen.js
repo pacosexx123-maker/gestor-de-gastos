@@ -1,13 +1,13 @@
 // Pantalla de Resumen: ahorro del mes y tasa de ahorro, últimos meses, patrimonio
 // (inversiones + saldos de tus cuentas) y objetivos de ahorro.
 
-import { leerDato, guardarDato, nuevoId } from './datos.js?v=20';
+import { leerDato, guardarDato, nuevoId } from './datos.js?v=23';
 import {
     obtenerMesActual, sumarMeses, nombreMesLargo, nombreMesCorto, obtenerFechaHoy, formatoFechaES,
     formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=20';
-import { resumenMes } from './gastos.js?v=20';
-import { obtenerTotalesCartera } from './inversiones.js?v=20';
+} from './utils.js?v=23';
+import { resumenMes } from './gastos.js?v=23';
+import { obtenerTotalesCartera } from './inversiones.js?v=23';
 
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICONO_ELIMINAR = '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';

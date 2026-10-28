@@ -1,16 +1,16 @@
 // Gastos e ingresos: tarjetas del mes (con comparación con el mes anterior), apartados
-// (gastos que van aparte, como "Hogar"), presupuestos, gráficos, historial con filtros,
+// (gastos que van aparte, como "Hogar"), gráficos, historial con filtros,
 // formulario (con notas y repetición mensual), duplicar y deshacer.
 
-import { leerDato, guardarDato } from './datos.js?v=20';
+import { leerDato, guardarDato } from './datos.js?v=23';
 import {
     obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesCorto, nombreMesLargo, formatoFechaES,
     formatoNumero, formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=20';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha } from './excel.js?v=20';
-import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=20';
-import { crearRecurrente } from './recurrentes.js?v=20';
-import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=20';
+} from './utils.js?v=23';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=23';
+import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=23';
+import { crearRecurrente } from './recurrentes.js?v=23';
+import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=23';
 
 const ICONO = {
     editar: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
@@ -32,7 +32,6 @@ const tituloMes = $('titulo-mes-actual');
 const formulario = $('formulario');
 const modalFormulario = $('contenedor-formulario');
 const modalDetalle = $('modal-detalle');
-const modalPresupuestos = $('modal-presupuestos');
 const selectTipo = $('tipo-movimiento');
 const selectApartado = $('mov-apartado');
 const selectCategoria = $('categoria');
@@ -189,67 +188,6 @@ function renderizarTarjetas(mes) {
         tarjeta.addEventListener('click', () => abrirDetalle({ tipo: 'apartado', id: apartado.id }));
         contenedor.appendChild(tarjeta);
     });
-}
-
-// --- PRESUPUESTOS ---
-
-function renderizarPresupuestos(mes) {
-    const contenedor = $('lista-presupuestos');
-    const gastado = gastoPorCategoria(mes);
-    const conPresupuesto = Object.entries(presupuestos).filter(([, limite]) => parseFloat(limite) > 0);
-    if (conPresupuesto.length === 0) {
-        contenedor.innerHTML = '<p class="estado-vacio">Define cuánto quieres gastar al mes en cada categoría y verás aquí cuánto te queda. Pulsa "Editar".</p>';
-        return;
-    }
-    const filas = conPresupuesto.map(([categoria, limite]) => {
-        const usado = gastado[categoria] || 0;
-        const porcentaje = (usado / parseFloat(limite)) * 100;
-        return { categoria, limite: parseFloat(limite), usado, porcentaje };
-    }).sort((a, b) => b.porcentaje - a.porcentaje);
-
-    contenedor.innerHTML = filas.map(f => {
-        const estado = f.porcentaje > 100 ? 'superado' : f.porcentaje >= 85 ? 'cerca' : 'bien';
-        const resto = f.limite - f.usado;
-        return `
-            <div class="presupuesto-fila presupuesto-${estado}">
-                <div class="presupuesto-texto">
-                    <b>${escaparHTML(f.categoria)}</b>
-                    <span>${formatoEuros(f.usado)} <small>de ${formatoEuros(f.limite)}</small></span>
-                </div>
-                <div class="presupuesto-barra"><span style="width: ${Math.min(100, f.porcentaje)}%"></span></div>
-                <small class="presupuesto-estado">${resto >= 0 ? `Quedan ${formatoEuros(resto)}` : `Te has pasado ${formatoEuros(-resto)}`} · ${formatoPorcentaje(f.porcentaje, 0)}</small>
-            </div>`;
-    }).join('');
-}
-
-function abrirEdicionPresupuestos() {
-    $('lista-editar-presupuestos').innerHTML = obtenerCategorias('gasto').map(categoria => `
-        <div class="presupuesto-edicion">
-            <label for="presupuesto-${escaparHTML(categoria)}">${escaparHTML(categoria)}</label>
-            <input type="number" id="presupuesto-${escaparHTML(categoria)}" data-categoria="${escaparHTML(categoria)}" min="0" step="any" inputmode="decimal" placeholder="Sin límite" value="${presupuestos[categoria] > 0 ? presupuestos[categoria] : ''}">
-        </div>`).join('');
-    ayudas.abrirModal(modalPresupuestos);
-}
-
-function guardarPresupuestos() {
-    const nuevos = {};
-    $('lista-editar-presupuestos').querySelectorAll('input').forEach(input => {
-        const valor = leerImporte(input.value);
-        if (valor > 0) nuevos[input.getAttribute('data-categoria')] = valor;
-    });
-    reemplazarPresupuestos(nuevos);
-    ayudas.cerrarModal(modalPresupuestos);
-    renderizarGastos();
-    ayudas.mostrarToast('Presupuestos guardados');
-}
-
-// Aviso al añadir un gasto que hace superar el presupuesto de su categoría
-function avisoPresupuesto(movimiento, gastadoAntes) {
-    if (esIngreso(movimiento) || movimiento.apartado) return '';
-    const limite = parseFloat(presupuestos[movimiento.categoria]);
-    if (!(limite > 0)) return '';
-    const gastadoAhora = gastoPorCategoria(mesDe(movimiento))[movimiento.categoria] || 0;
-    return gastadoAntes <= limite && gastadoAhora > limite ? ` · Has superado el presupuesto de ${movimiento.categoria}` : '';
 }
 
 // --- ANÁLISIS (gráficos) ---
@@ -506,7 +444,6 @@ function guardarFormulario(evento) {
     };
     if (selectApartado.value) movimiento.apartado = selectApartado.value;
     if (inputNota.value.trim()) movimiento.nota = inputNota.value.trim();
-    const gastadoAntes = gastoPorCategoria(movimiento.fecha.substring(0, 7))[movimiento.categoria] || 0;
 
     let mensaje;
     if (indiceEditando !== null) {
@@ -527,7 +464,7 @@ function guardarFormulario(evento) {
     inputMes.value = movimiento.fecha.substring(0, 7);
     renderizarGastos();
     cerrarFormulario();
-    ayudas.mostrarToast(mensaje + avisoPresupuesto(movimiento, indiceEditando === null ? gastadoAntes : Infinity));
+    ayudas.mostrarToast(mensaje);
 }
 
 // --- PINTAR TODO ---
@@ -541,7 +478,6 @@ export function renderizarGastos() {
         el.classList.add('animacion-suave');
     });
     renderizarTarjetas(mes);
-    renderizarPresupuestos(mes);
     renderizarAnalisis(mes);
     rellenarFiltros();
     renderizarHistorial(mes);
@@ -549,37 +485,337 @@ export function renderizarGastos() {
 }
 
 // --- EXCEL ---
+// El gasto general es solo el personal. Cada apartado (Hogar, etc.) va aparte: su propia hoja,
+// con sus tablas y gráficas, y no se suma al gasto ni al ahorro general.
+// Hojas: "Total" (personal), "Movimientos", una por apartado y una por mes.
 
-const COLUMNAS_EXCEL = [
-    { titulo: 'Fecha', ancho: 12 }, { titulo: 'Tipo', ancho: 10 }, { titulo: 'Apartado', ancho: 14 },
-    { titulo: 'Categoría', ancho: 16 }, { titulo: 'Concepto', ancho: 32 }, { titulo: 'Nota', ancho: 28 }, { titulo: 'Cantidad (€)', ancho: 14 }
-];
+const CABECERA_MOVIMIENTOS = ['Fecha', 'Tipo', 'Apartado', 'Categoría', 'Concepto', 'Nota', 'Importe'];
 
-function filasExcel(lista) {
-    const filas = ordenarPorFecha(lista).map(m => {
-        const apartado = m.apartado ? apartadoPorId(m.apartado) : null;
-        return [
-            { v: m.fecha, tipo: 'fecha' },
-            { v: esIngreso(m) ? 'Ingreso' : 'Gasto' },
-            { v: apartado ? apartado.nombre : 'Personal' },
-            { v: m.categoria || 'Otros' },
-            { v: m.concepto || 'Sin concepto' },
-            { v: m.nota || '' },
-            { v: importe(m), tipo: 'dinero' }
-        ];
+function filaCabecera(hoja, titulos, numericasDesde) {
+    return hoja.anadir(titulos.map((t, i) => ({ v: t, estilo: 'cabecera', derecha: numericasDesde !== undefined && i >= numericasDesde })));
+}
+
+// Cifras clave: etiqueta y valor en dos columnas combinadas cada una
+function cifrasClave(hoja, cifras) {
+    const filaEtiquetas = hoja.anadir([]);
+    const filaValores = hoja.anadir([]);
+    cifras.forEach((cifra, i) => {
+        const col = i * 2;
+        hoja.filas[filaEtiquetas - 1][col] = { v: cifra.etiqueta, estilo: 'kpiEtiqueta' };
+        hoja.filas[filaEtiquetas - 1][col + 1] = { v: '', estilo: 'kpiEtiqueta' };
+        hoja.filas[filaValores - 1][col] = { ...cifra.valor, estilo: 'kpiValor' };
+        hoja.filas[filaValores - 1][col + 1] = { v: '', estilo: 'kpiEtiqueta' };
+        hoja.combinadas.push(`${ref(col, filaEtiquetas)}:${ref(col + 1, filaEtiquetas)}`, `${ref(col, filaValores)}:${ref(col + 1, filaValores)}`);
     });
-    const ingresos = sumar(lista.filter(esIngreso));
+    return filaValores;
+}
+
+function nombreApartado(m) {
+    const apartado = m.apartado ? apartadoPorId(m.apartado) : null;
+    return apartado ? apartado.nombre : 'Personal';
+}
+
+// Lista de movimientos con filtros y totales (con fórmulas).
+// alcance: 'personal' (los totales solo cuentan lo personal) o el nombre de un apartado.
+function listaMovimientos(hoja, lista, alcance = 'personal') {
+    const cabecera = filaCabecera(hoja, CABECERA_MOVIMIENTOS, 6);
+    ordenarPorFecha(lista).forEach(m => hoja.anadir([
+        { v: m.fecha, tipo: 'fecha' },
+        { v: esIngreso(m) ? 'Ingreso' : 'Gasto' },
+        { v: nombreApartado(m) },
+        { v: m.categoria || 'Otros' },
+        { v: m.concepto || 'Sin concepto' },
+        { v: m.nota || '' },
+        { v: esIngreso(m) ? importe(m) : -importe(m), tipo: 'dineroSigno' }
+    ]));
+    const ultima = Math.max(hoja.filaActual, cabecera + 1);
+    const rango = c => `${ref(c, cabecera + 1)}:${ref(c, ultima)}`;
+    hoja.filtro = `A${cabecera}:G${ultima}`;
+    hoja.anadir([]);
+
+    const delAlcance = lista.filter(m => alcance === 'personal' ? !m.apartado : nombreApartado(m) === alcance);
+    const entradas = sumar(delAlcance.filter(esIngreso));
+    const salidas = sumar(delAlcance.filter(m => !esIngreso(m)));
+    const sumaSi = tipo => `SUMIFS(${rango(6)},${rango(1)},"${tipo}",${rango(2)},"${escaparComillas(alcance === 'personal' ? 'Personal' : alcance)}")`;
+    const total = (texto, f, v, tipo) => hoja.anadir([null, null, null, null, null, { v: texto, estilo: 'total' }, { f, v, tipo, estilo: 'total' }]);
+    if (alcance === 'personal') {
+        total('Ingresos (personal)', sumaSi('Ingreso'), entradas, 'dinero');
+        total('Gasto personal', `-${sumaSi('Gasto')}`, salidas, 'dinero');
+        total('Ahorro', `${sumaSi('Ingreso')}+${sumaSi('Gasto')}`, entradas - salidas, 'dineroSigno');
+        if (lista.some(m => m.apartado)) hoja.anadir([null, null, null, null, { v: 'Los movimientos de los apartados no cuentan en estos totales.', estilo: 'nota' }]);
+    } else {
+        total('Gastos', `-${sumaSi('Gasto')}`, salidas, 'dinero');
+        total('Devoluciones', sumaSi('Ingreso'), entradas, 'dinero');
+        total('Neto', `-(${sumaSi('Gasto')}+${sumaSi('Ingreso')})`, salidas - entradas, 'dineroSigno');
+    }
+    return cabecera;
+}
+
+function escaparComillas(texto) {
+    return String(texto).replace(/"/g, '""');
+}
+
+function colorCategoria(categoria) {
+    const indice = obtenerCategorias('gasto').indexOf(categoria);
+    return indice >= 0 && indice < COLORES_GRAFICO.length ? COLORES_GRAFICO[indice] : COLOR_OTROS;
+}
+
+// Tabla "por categoría" con su gráfica de anillo. Devuelve si se ha añadido.
+function tablaCategorias(hoja, lista, { titulo, tituloGrafico, ancla, meses }) {
+    const porCategoria = {};
+    lista.filter(m => !esIngreso(m)).forEach(m => { porCategoria[m.categoria || 'Otros'] = (porCategoria[m.categoria || 'Otros'] || 0) + importe(m); });
+    const categorias = Object.entries(porCategoria).sort((a, b) => b[1] - a[1]);
+    if (!categorias.length) return false;
+    const total = categorias.reduce((s, c) => s + c[1], 0);
+    // Las categorías personales llevan su color de siempre; las demás (p. ej. las de un apartado), los siguientes libres
+    const usados = new Set(categorias.map(c => colorCategoria(c[0])).filter(c => c !== COLOR_OTROS));
+    const libres = COLORES_GRAFICO.filter(c => !usados.has(c));
+    const colores = categorias.map(c => { const color = colorCategoria(c[0]); return color !== COLOR_OTROS ? color : (libres.shift() || COLOR_OTROS); });
+
+    hoja.anadir([]);
+    hoja.anadir([{ v: titulo, estilo: 'seccion' }]);
+    // En una hoja de un solo mes no tiene sentido la media al mes
+    const columnas = meses > 1 ? ['Categoría', 'Total', '% del total', 'Media al mes'] : ['Categoría', 'Gastado', '% del gasto'];
+    const cab = filaCabecera(hoja, columnas, 1);
+    categorias.forEach(([categoria, valor]) => {
+        const f = hoja.filaActual + 1;
+        const fila = [{ v: categoria }, { v: valor, tipo: 'dinero' }, { f: `B${f}/SUM($B$${cab + 1}:$B$${cab + categorias.length})`, v: valor / total, tipo: 'porcentaje' }];
+        if (meses > 1) fila.push({ f: `B${f}/${meses}`, v: valor / meses, tipo: 'dinero' });
+        hoja.anadir(fila);
+    });
+    const pc = cab + 1, uc = hoja.filaActual;
+    hoja.anadir([{ v: 'Total', estilo: 'total' }, { f: `SUM(B${pc}:B${uc})`, v: total, tipo: 'dinero', estilo: 'total' }]);
+    if (categorias.length > 1 || meses > 1) {
+        hoja.graficos.push({
+            tipo: 'anillo', titulo: tituloGrafico, ancla,
+            categorias: { rango: `A${pc}:A${uc}`, valores: categorias.map(c => c[0]) },
+            series: [{ nombre: 'Gasto', rango: `B${pc}:B${uc}`, valores: categorias.map(c => c[1]), colores }]
+        });
+    }
+    return true;
+}
+
+// --- HOJA "TOTAL": solo lo personal ---
+
+function hojaTotal(meses) {
+    const hoja = new Hoja('Total');
+    hoja.anchos = [18, 15, 16, 15, 15, 3];
+    hoja.anadir([{ v: 'Gastos e ingresos', estilo: 'titulo' }]);
+    hoja.anadir([{ v: `Generado el ${formatoFechaES(obtenerFechaHoy())} con Gestor de Gastos · De ${nombreHojaMes(meses[0])} a ${nombreHojaMes(meses[meses.length - 1])} · Gasto general = gasto personal (los apartados van en sus hojas)`, estilo: 'nota' }]);
+    hoja.anadir([]);
+
+    const datos = meses.map(mes => {
+        const personales = personalesDelMes(mes);
+        return { mes, ingresos: sumar(personales.filter(esIngreso)), gasto: sumar(personales.filter(m => !esIngreso(m))) };
+    });
+    const ingresos = datos.reduce((s, d) => s + d.ingresos, 0);
+    const gasto = datos.reduce((s, d) => s + d.gasto, 0);
+
+    // Las cifras clave apuntan a la fila de totales de la tabla mes a mes
+    const filaTotal = 3 + 2 + 1 + 1 + 1 + datos.length + 1;
+    cifrasClave(hoja, [
+        { etiqueta: 'Ingresos', valor: { f: `B${filaTotal}`, v: ingresos, tipo: 'dinero' } },
+        { etiqueta: 'Gasto personal', valor: { f: `C${filaTotal}`, v: gasto, tipo: 'dinero' } },
+        { etiqueta: 'Ahorro', valor: { f: `D${filaTotal}`, v: ingresos - gasto, tipo: 'dineroSigno' } },
+        { etiqueta: 'Tasa de ahorro', valor: { f: `IF(B${filaTotal}>0,D${filaTotal}/B${filaTotal},"")`, v: ingresos > 0 ? (ingresos - gasto) / ingresos : '', tipo: 'porcentajeSigno' } }
+    ]);
+    hoja.anadir([]);
+
+    hoja.anadir([{ v: 'Mes a mes', estilo: 'seccion' }]);
+    const cabecera = filaCabecera(hoja, ['Mes', 'Ingresos', 'Gasto personal', 'Ahorro', 'Tasa de ahorro'], 1);
+    datos.forEach(d => {
+        const f = hoja.filaActual + 1;
+        hoja.anadir([
+            { v: nombreHojaMes(d.mes) },
+            { v: d.ingresos, tipo: 'dinero' },
+            { v: d.gasto, tipo: 'dinero' },
+            { f: `B${f}-C${f}`, v: d.ingresos - d.gasto, tipo: 'dineroSigno' },
+            { f: `IF(B${f}>0,D${f}/B${f},"")`, v: d.ingresos > 0 ? (d.ingresos - d.gasto) / d.ingresos : '', tipo: 'porcentajeSigno' }
+        ]);
+    });
+    const primera = cabecera + 1, ultima = hoja.filaActual;
+    hoja.anadir([{ v: 'Total', estilo: 'total' },
+        { f: `SUM(B${primera}:B${ultima})`, v: ingresos, tipo: 'dinero', estilo: 'total' },
+        { f: `SUM(C${primera}:C${ultima})`, v: gasto, tipo: 'dinero', estilo: 'total' },
+        { f: `SUM(D${primera}:D${ultima})`, v: ingresos - gasto, tipo: 'dineroSigno', estilo: 'total' },
+        { f: `IF(B${filaTotal}>0,D${filaTotal}/B${filaTotal},"")`, v: ingresos > 0 ? (ingresos - gasto) / ingresos : '', tipo: 'porcentajeSigno', estilo: 'total' }]);
+
+    const categoriasMes = { rango: `A${primera}:A${ultima}`, valores: datos.map(d => nombreHojaMes(d.mes)) };
+    hoja.graficos.push({
+        tipo: 'columnas', titulo: 'Ingresos y gasto personal por mes', ancla: { col: 6, fila: 3, ancho: 9, alto: 17 }, categorias: categoriasMes,
+        series: [
+            { nombre: 'Ingresos', rango: `B${primera}:B${ultima}`, valores: datos.map(d => d.ingresos), color: COLORES_GRAFICO[2] },
+            { nombre: 'Gasto personal', rango: `C${primera}:C${ultima}`, valores: datos.map(d => d.gasto), color: COLORES_GRAFICO[1] }
+        ]
+    });
+    hoja.graficos.push({
+        tipo: 'columnas', titulo: 'Ahorro mensual', ancla: { col: 6, fila: 21, ancho: 9, alto: 15 }, sinLeyenda: true, categorias: categoriasMes,
+        series: [{ nombre: 'Ahorro', rango: `D${primera}:D${ultima}`, valores: datos.map(d => d.ingresos - d.gasto), color: COLORES_GRAFICO[0], colorNegativo: COLORES_GRAFICO[7] }]
+    });
+
+    tablaCategorias(hoja, movimientos.filter(m => !m.apartado), {
+        titulo: 'Gasto personal por categoría', tituloGrafico: 'Gasto personal por categoría',
+        ancla: { col: 6, fila: 37, ancho: 9, alto: 17 }, meses: datos.length
+    });
+
+    // Resumen de los apartados (su detalle está en su propia hoja)
+    const apartados = apartadosConDatos();
+    if (apartados.length) {
+        hoja.anadir([]);
+        hoja.anadir([{ v: 'Apartados (van aparte, no suman al gasto personal)', estilo: 'seccion' }]);
+        filaCabecera(hoja, ['Apartado', 'Gastos', 'Devoluciones', 'Neto', 'Cómo cuenta'], 1);
+        apartados.forEach(({ apartado, lista }) => {
+            const f = hoja.filaActual + 1;
+            const gastos = sumar(lista.filter(m => !esIngreso(m)));
+            const devoluciones = sumar(lista.filter(esIngreso));
+            hoja.anadir([{ v: apartado.nombre }, { v: gastos, tipo: 'dinero' }, { v: devoluciones, tipo: 'dinero' },
+                { f: `B${f}-C${f}`, v: gastos - devoluciones, tipo: 'dineroSigno' }, { v: apartado.acumulado ? 'Acumulado' : 'Mensual' }]);
+        });
+        hoja.anadir([{ v: 'Cada apartado tiene su detalle (mes a mes, categorías y movimientos) en su propia hoja.', estilo: 'nota' }]);
+    }
+    return hoja;
+}
+
+function apartadosConDatos() {
+    return obtenerApartados()
+        .map(apartado => ({ apartado, lista: movimientos.filter(m => m.apartado === apartado.id) }))
+        .filter(a => a.lista.length);
+}
+
+// --- UNA HOJA POR APARTADO ---
+
+function hojaApartado(apartado, lista, meses) {
+    const hoja = new Hoja(apartado.nombre);
+    // Las tablas usan las columnas A-E y la lista de movimientos A-G; las gráficas van a la derecha (columna I)
+    hoja.anchos = [18, 14, 14, 16, 30, 24, 14, 3];
     const gastos = sumar(lista.filter(m => !esIngreso(m)));
-    const fila = (texto, valor) => [null, null, null, null, null, { v: texto, negrita: true }, { v: parseFloat(valor.toFixed(2)), tipo: 'dinero', negrita: true }];
-    filas.push([], fila('Total ingresos', ingresos), fila('Total gastos', gastos), fila('Balance', ingresos - gastos));
-    return filas;
+    const devoluciones = sumar(lista.filter(esIngreso));
+    // Meses desde el primer movimiento del apartado hasta el último mes del periodo
+    const desde = lista.map(mesDe).filter(Boolean).sort()[0] || meses[0];
+    const mesesApartado = meses.filter(m => m >= desde);
+
+    hoja.anadir([{ v: apartado.nombre, estilo: 'titulo' }]);
+    hoja.anadir([{ v: `Apartado: va aparte y no se suma al gasto personal · ${apartado.acumulado ? 'En la app se muestra acumulado' : 'En la app se muestra mes a mes'} · Las devoluciones (p. ej. Bizum) se restan`, estilo: 'nota' }]);
+    hoja.anadir([]);
+    const filaTotal = 3 + 2 + 1 + 1 + 1 + mesesApartado.length + 1;
+    cifrasClave(hoja, [
+        { etiqueta: 'Gastos', valor: { f: `B${filaTotal}`, v: gastos, tipo: 'dinero' } },
+        { etiqueta: 'Devoluciones', valor: { f: `C${filaTotal}`, v: devoluciones, tipo: 'dinero' } },
+        { etiqueta: 'Neto', valor: { f: `D${filaTotal}`, v: gastos - devoluciones, tipo: 'dineroSigno' } },
+        { etiqueta: 'Neto medio al mes', valor: { f: `D${filaTotal}/${mesesApartado.length}`, v: (gastos - devoluciones) / mesesApartado.length, tipo: 'dineroSigno' } }
+    ]);
+    hoja.anadir([]);
+
+    hoja.anadir([{ v: 'Mes a mes', estilo: 'seccion' }]);
+    const cabecera = filaCabecera(hoja, ['Mes', 'Gastos', 'Devoluciones', 'Neto', 'Acumulado'], 1);
+    let acumulado = 0;
+    const datos = mesesApartado.map(mes => {
+        const delMes = lista.filter(m => mesDe(m) === mes);
+        const g = sumar(delMes.filter(m => !esIngreso(m)));
+        const d = sumar(delMes.filter(esIngreso));
+        acumulado += g - d;
+        return { mes, gastos: g, devoluciones: d, neto: g - d, acumulado };
+    });
+    datos.forEach((d, i) => {
+        const f = hoja.filaActual + 1;
+        hoja.anadir([
+            { v: nombreHojaMes(d.mes) },
+            { v: d.gastos, tipo: 'dinero' },
+            { v: d.devoluciones, tipo: 'dinero' },
+            { f: `B${f}-C${f}`, v: d.neto, tipo: 'dineroSigno' },
+            { f: i === 0 ? `D${f}` : `E${f - 1}+D${f}`, v: d.acumulado, tipo: 'dineroSigno' }
+        ]);
+    });
+    const primera = cabecera + 1, ultima = hoja.filaActual;
+    hoja.anadir([{ v: 'Total', estilo: 'total' },
+        { f: `SUM(B${primera}:B${ultima})`, v: gastos, tipo: 'dinero', estilo: 'total' },
+        { f: `SUM(C${primera}:C${ultima})`, v: devoluciones, tipo: 'dinero', estilo: 'total' },
+        { f: `SUM(D${primera}:D${ultima})`, v: gastos - devoluciones, tipo: 'dineroSigno', estilo: 'total' }]);
+
+    const categoriasMes = { rango: `A${primera}:A${ultima}`, valores: datos.map(d => nombreHojaMes(d.mes)) };
+    const series = [{ nombre: 'Gastos', rango: `B${primera}:B${ultima}`, valores: datos.map(d => d.gastos), color: COLORES_GRAFICO[1] }];
+    if (devoluciones > 0) series.push({ nombre: 'Devoluciones', rango: `C${primera}:C${ultima}`, valores: datos.map(d => d.devoluciones), color: COLORES_GRAFICO[2] });
+    hoja.graficos.push({ tipo: 'columnas', titulo: `${apartado.nombre}: gastos y devoluciones por mes`, ancla: { col: 8, fila: 3, ancho: 8, alto: 17 }, sinLeyenda: series.length === 1, categorias: categoriasMes, series });
+    hoja.graficos.push(apartado.acumulado
+        ? { tipo: 'lineas', titulo: `${apartado.nombre}: saldo acumulado`, ancla: { col: 8, fila: 21, ancho: 8, alto: 15 }, sinLeyenda: true, categorias: categoriasMes,
+            series: [{ nombre: 'Acumulado', rango: `E${primera}:E${ultima}`, valores: datos.map(d => d.acumulado), color: COLORES_GRAFICO[0], puntos: true }] }
+        : { tipo: 'columnas', titulo: `${apartado.nombre}: neto por mes`, ancla: { col: 8, fila: 21, ancho: 8, alto: 15 }, sinLeyenda: true, categorias: categoriasMes,
+            series: [{ nombre: 'Neto', rango: `D${primera}:D${ultima}`, valores: datos.map(d => d.neto), color: COLORES_GRAFICO[0], colorNegativo: COLORES_GRAFICO[2] }] });
+
+    tablaCategorias(hoja, lista, {
+        titulo: 'Gastos por categoría', tituloGrafico: `${apartado.nombre}: gastos por categoría`,
+        ancla: { col: 8, fila: 37, ancho: 8, alto: 17 }, meses: mesesApartado.length
+    });
+
+    hoja.anadir([]);
+    hoja.anadir([{ v: 'Movimientos', estilo: 'seccion' }]);
+    listaMovimientos(hoja, lista, apartado.nombre);
+    return hoja;
+}
+
+// --- UNA HOJA POR MES ---
+
+function hojaMes(mes, lista) {
+    const hoja = new Hoja(nombreHojaMes(mes));
+    hoja.anchos = [12, 10, 14, 16, 30, 26, 14, 3];
+    const personales = lista.filter(m => !m.apartado);
+    const ingresos = sumar(personales.filter(esIngreso));
+    const gastoPersonal = sumar(personales.filter(m => !esIngreso(m)));
+
+    hoja.anadir([{ v: nombreHojaMes(mes), estilo: 'titulo' }]);
+    hoja.anadir([{ v: `${lista.length} ${lista.length === 1 ? 'movimiento' : 'movimientos'} · Gasto general = gasto personal`, estilo: 'nota' }]);
+    hoja.anadir([]);
+    cifrasClave(hoja, [
+        { etiqueta: 'Ingresos', valor: { v: ingresos, tipo: 'dinero' } },
+        { etiqueta: 'Gasto personal', valor: { v: gastoPersonal, tipo: 'dinero' } },
+        { etiqueta: 'Ahorro', valor: { v: ingresos - gastoPersonal, tipo: 'dineroSigno' } },
+        { etiqueta: 'Tasa de ahorro', valor: { v: ingresos > 0 ? (ingresos - gastoPersonal) / ingresos : '', tipo: 'porcentajeSigno' } }
+    ]);
+
+    tablaCategorias(hoja, personales, {
+        titulo: 'Gasto personal por categoría', tituloGrafico: `Gasto personal · ${nombreHojaMes(mes).toLowerCase()}`,
+        ancla: { col: 8, fila: 3, ancho: 7, alto: 16 }, meses: 1
+    });
+
+    // Apartados de este mes, aparte
+    const conApartado = lista.filter(m => m.apartado);
+    if (conApartado.length) {
+        hoja.anadir([]);
+        hoja.anadir([{ v: 'Apartados (aparte del gasto personal)', estilo: 'seccion' }]);
+        filaCabecera(hoja, ['Apartado', 'Gastos', 'Devoluciones', 'Neto'], 1);
+        obtenerApartados().forEach(apartado => {
+            const delApartado = conApartado.filter(m => m.apartado === apartado.id);
+            if (!delApartado.length) return;
+            const f = hoja.filaActual + 1;
+            const g = sumar(delApartado.filter(m => !esIngreso(m)));
+            const d = sumar(delApartado.filter(esIngreso));
+            hoja.anadir([{ v: apartado.nombre }, { v: g, tipo: 'dinero' }, { v: d, tipo: 'dinero' }, { f: `B${f}-C${f}`, v: g - d, tipo: 'dineroSigno' }]);
+        });
+    }
+
+    hoja.anadir([]);
+    hoja.anadir([{ v: 'Movimientos', estilo: 'seccion' }]);
+    listaMovimientos(hoja, lista, 'personal');
+    return hoja;
 }
 
 export function generarExcelGastos() {
     if (movimientos.length === 0) return null;
-    const hojas = [{ nombre: 'Total', columnas: COLUMNAS_EXCEL, filas: filasExcel(movimientos) }];
-    agruparPorMes(movimientos).forEach(mes => hojas.push({ nombre: mes.nombre, columnas: COLUMNAS_EXCEL, filas: filasExcel(mes.elementos) }));
-    return crearLibroExcel(hojas);
+    // Todos los meses entre el primero y el último con movimientos (también los vacíos, para las gráficas)
+    const ordenados = movimientos.filter(m => /^\d{4}-\d{2}/.test(m.fecha || '')).map(mesDe).sort();
+    const meses = [];
+    if (ordenados.length) for (let m = ordenados[0]; m <= ordenados[ordenados.length - 1]; m = sumarMeses(m, 1)) meses.push(m);
+    if (!meses.length) meses.push(obtenerMesActual());
+
+    const total = hojaTotal(meses);
+    const todos = new Hoja('Movimientos');
+    todos.anchos = [12, 10, 14, 16, 30, 26, 14];
+    todos.congelarFilas = 1;
+    listaMovimientos(todos, movimientos, 'personal');
+
+    const porApartado = apartadosConDatos().map(({ apartado, lista }) => hojaApartado(apartado, lista, meses));
+    const porMes = agruparPorMes(movimientos).filter(g => g.mes !== 'sin-fecha').map(g => hojaMes(g.mes, g.elementos));
+    return crearLibroExcel([total, todos, ...porApartado, ...porMes]);
 }
 
 // --- INICIO ---
@@ -630,11 +866,7 @@ export function iniciarGastos(funcionesAyuda) {
     ['filtro-mov-texto'].forEach(id => $(id).addEventListener('input', () => renderizarHistorial(inputMes.value)));
     ['filtro-mov-categoria', 'filtro-mov-ambito', 'filtro-mov-todos'].forEach(id => $(id).addEventListener('change', () => renderizarHistorial(inputMes.value)));
 
-    // Presupuestos y análisis
-    $('btn-editar-presupuestos').addEventListener('click', abrirEdicionPresupuestos);
-    $('btn-guardar-presupuestos').addEventListener('click', guardarPresupuestos);
-    $('btn-cerrar-presupuestos').addEventListener('click', () => ayudas.cerrarModal(modalPresupuestos));
-    modalPresupuestos.addEventListener('click', (e) => { if (e.target === modalPresupuestos) ayudas.cerrarModal(modalPresupuestos); });
+    // Análisis
     document.querySelectorAll('#selector-analisis button').forEach(btn => btn.addEventListener('click', () => {
         modoAnalisis = btn.getAttribute('data-modo');
         localStorage.setItem('modoAnalisisGastos', modoAnalisis);

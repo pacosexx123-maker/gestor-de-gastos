@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20">
+    <link rel="stylesheet" href="css/style.css?v=23">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -130,23 +130,6 @@
                 <span id="comparacion-gastos" class="comparacion"></span>
                 <span class="total-pie">Del mes · Ver desglose <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
             </div>
-        </section>
-
-        <!-- Presupuestos del mes -->
-        <section class="tarjeta">
-            <div class="cabecera-tarjeta estatica">
-                <div class="cabecera-tarjeta-titulo">
-                    <span class="icono-tarjeta">
-                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                    </span>
-                    <div>
-                        <b>Presupuestos</b>
-                        <small>Gasto personal del mes por categoría</small>
-                    </div>
-                </div>
-                <button type="button" id="btn-editar-presupuestos" class="btn-secundario btn-mini">Editar</button>
-            </div>
-            <div id="lista-presupuestos" class="lista-presupuestos"></div>
         </section>
 
         <!-- Análisis de gastos -->
@@ -667,22 +650,6 @@
         </div>
     </div>
 
-    <!-- Modal presupuestos -->
-    <div id="modal-presupuestos" class="modal-overlay oculto">
-        <div class="modal-contenido">
-            <div class="cabecera-modal">
-                <div>
-                    <b>Presupuestos mensuales</b>
-                    <small class="subtitulo-modal">Cuánto quieres gastar al mes en cada categoría (gasto personal)</small>
-                </div>
-                <button id="btn-cerrar-presupuestos" class="btn-cerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-            </div>
-            <div id="lista-editar-presupuestos" class="lista-editar-presupuestos"></div>
-            <p class="texto-ayuda">Déjalo vacío para no poner límite. Te avisaremos al pasarte.</p>
-            <button type="button" id="btn-guardar-presupuestos" class="btn-guardar">Guardar presupuestos</button>
-        </div>
-    </div>
-
     <!-- Modal categorías y apartados -->
     <div id="modal-config-gastos" class="modal-overlay oculto">
         <div class="modal-contenido">
@@ -1120,6 +1087,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=20"></script>
+    <script type="module" src="js/main.js?v=23"></script>
 </body>
 </html>

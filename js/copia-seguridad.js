@@ -2,8 +2,8 @@
 // propio navegador), aviso periódico y envío con el menú de compartir del móvil.
 // Los datos solo salen del dispositivo cifrados y por la app que elija el usuario.
 
-import { obtenerFechaHoy, descargarArchivo } from './utils.js?v=20';
-import { bytesABase64, base64ABytes } from './excel.js?v=20';
+import { obtenerFechaHoy, descargarArchivo } from './utils.js?v=23';
+import { bytesABase64, base64ABytes } from './excel.js?v=23';
 
 const FORMATO_CIFRADO = 'gestor-gastos-cifrado';
 const ITERACIONES = 310000;

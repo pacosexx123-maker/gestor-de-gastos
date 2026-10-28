@@ -1,27 +1,27 @@
 // Arranque de la app: navegación entre pestañas, avisos, ventanas, menú de datos
 // (exportar, copia de seguridad e importar) y conexión entre los módulos.
 
-import { obtenerFechaHoy, descargarArchivo, formatoFechaES } from './utils.js?v=20';
-import { bytesABase64, MIME_EXCEL } from './excel.js?v=20';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=20';
+import { obtenerFechaHoy, descargarArchivo, formatoFechaES } from './utils.js?v=23';
+import { bytesABase64, MIME_EXCEL } from './excel.js?v=23';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=23';
 import {
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, reemplazarInversiones,
     generarExcelInversiones, anadirInversiones, obtenerHistoricoValor, reemplazarHistoricoValor
-} from './inversiones.js?v=20';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=20';
-import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=20';
-import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=20';
-import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=20';
-import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=20';
+} from './inversiones.js?v=23';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=23';
+import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=23';
+import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=23';
+import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=23';
+import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=23';
 import {
     iniciarGastos, abrirFormularioGasto, obtenerMovimientos, reemplazarMovimientos, anadirMovimientos,
     generarExcelGastos, renombrarCategoriaEnMovimientos, quitarApartadoDeMovimientos,
     obtenerPresupuestos, reemplazarPresupuestos, renderizarGastos
-} from './gastos.js?v=20';
-import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=20';
-import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=20';
-import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=20';
-import { iniciarBloqueo } from './bloqueo.js?v=20';
+} from './gastos.js?v=23';
+import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=23';
+import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=23';
+import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=23';
+import { iniciarBloqueo } from './bloqueo.js?v=23';
 
 // --- AVISOS (con opción de deshacer) ---
 
