@@ -2,10 +2,11 @@
 // Columnas reconocidas: Fecha de la orden, ISIN, Importe, Nº de participaciones, Estado
 // (y opcionalmente Nombre/Fondo y Precio/Valor liquidativo).
 
-import { leerPrimeraHojaExcel, excelAFecha } from './excel.js?v=17';
+import { leerPrimeraHojaExcel, excelAFecha } from './excel.js?v=20';
+import { formatoEuros, tieneDetalleTitulos, formatoFechaES, esVenta } from './utils.js?v=20';
 import {
-    obtenerInversiones, anadirInversiones, buscarActivo, normalizarIsin, escaparHTML, formatoDecimal
-} from './inversiones.js?v=17';
+    obtenerInversiones, anadirInversiones, eliminarInversiones, buscarActivo, normalizarIsin, escaparHTML, formatoDecimal
+} from './inversiones.js?v=20';
 
 const modalImportar = document.getElementById('modal-importar-ordenes');
 const listaOrdenes = document.getElementById('lista-ordenes-importar');
@@ -120,6 +121,7 @@ async function leerOrdenes(archivo) {
     }
 
     const existentes = obtenerInversiones();
+    const sustituidas = new Set();
     return filas.slice(filaCabecera + 1).map(fila => {
         const isin = normalizarIsin(fila[columnas.isin]);
         const participaciones = leerNumero(fila[columnas.participaciones]);
@@ -133,6 +135,11 @@ async function leerOrdenes(archivo) {
         const conocido = buscarActivo({ isin });
         const duplicada = existentes.some(inv =>
             normalizarIsin(inv.isin) === isin && inv.fecha === fecha && Math.abs(parseFloat(inv.cantidad) - participaciones) < 1e-6);
+        // Aportación periódica apuntada automáticamente ese mes para ese fondo: la orden real la sustituye
+        const sustituye = duplicada ? -1 : existentes.findIndex((inv, i) =>
+            inv.recurrenteId && !tieneDetalleTitulos(inv) && !esVenta(inv) && !sustituidas.has(i) &&
+            normalizarIsin(inv.isin) === isin && (inv.fecha || '').substring(0, 7) === fecha.substring(0, 7));
+        if (sustituye >= 0) sustituidas.add(sustituye);
 
         return {
             fecha, isin, estado, participaciones,
@@ -141,6 +148,8 @@ async function leerOrdenes(archivo) {
             tipo: conocido ? conocido.tipo || 'Fondo' : 'Fondo',
             conocido: !!conocido,
             duplicada,
+            sustituye: sustituye >= 0 ? sustituye : null,
+            fechaSustituida: sustituye >= 0 ? existentes[sustituye].fecha : null,
             finalizada: estaFinalizada(estado),
             seleccionada: estaFinalizada(estado) && !duplicada
         };
@@ -159,6 +168,7 @@ function actualizarResumen() {
 function renderizarVistaPrevia() {
     listaOrdenes.innerHTML = ordenesPendientes.map((orden, i) => {
         const aviso = orden.duplicada ? 'Ya importada' : (!orden.finalizada ? 'No finalizada' : '');
+        const avisoSustituye = orden.sustituye !== null ? `Sustituye la aportación periódica del ${formatoFechaES(orden.fechaSustituida)}` : '';
         const total = orden.participaciones * orden.precio;
         return `
             <div class="orden-fila ${orden.seleccionada ? '' : 'desmarcada'}">
@@ -169,11 +179,12 @@ function renderizarVistaPrevia() {
                         <span class="texto-isin">${escaparHTML(orden.isin)}</span>
                         ${orden.estado ? `<span class="pildora">${escaparHTML(orden.estado)}</span>` : ''}
                         ${aviso ? `<span class="pildora pildora-aviso">${aviso}</span>` : ''}
+                        ${avisoSustituye ? `<span class="pildora pildora-recurrente">${avisoSustituye}</span>` : ''}
                     </div>
                     ${orden.conocido
                         ? `<span class="orden-nombre-conocido">${escaparHTML(orden.nombre)}</span>`
                         : `<input type="text" class="orden-nombre" data-isin="${escaparHTML(orden.isin)}" value="${escaparHTML(orden.nombre)}" placeholder="Nombre del fondo (nuevo ISIN)">`}
-                    <small>${formatoDecimal(orden.participaciones, 6)} part. × ${formatoDecimal(orden.precio, 4)} € = <b>${total.toFixed(2)} €</b></small>
+                    <small>${formatoDecimal(orden.participaciones, 6)} part. × ${formatoDecimal(orden.precio, 4)} € = <b>${formatoEuros(total)}</b></small>
                 </div>
             </div>`;
     }).join('');
@@ -213,7 +224,10 @@ export async function importarOrdenesDesdeArchivo(archivo) {
 }
 
 function confirmarImportacion() {
-    const nuevas = ordenesPendientes.filter(o => o.seleccionada).map(o => ({
+    const seleccionadas = ordenesPendientes.filter(o => o.seleccionada);
+    const sustituir = seleccionadas.filter(o => o.sustituye !== null).map(o => o.sustituye);
+    if (sustituir.length) eliminarInversiones(sustituir);
+    const nuevas = seleccionadas.map(o => ({
         nombre: o.nombre.trim() || o.isin,
         isin: o.isin,
         tipo: o.tipo,
@@ -224,7 +238,8 @@ function confirmarImportacion() {
     anadirInversiones(nuevas);
     ayudas.cerrarModal(modalImportar);
     ayudas.alImportar();
-    ayudas.mostrarToast(nuevas.length === 1 ? '1 orden importada' : `${nuevas.length} órdenes importadas`);
+    ayudas.mostrarToast((nuevas.length === 1 ? '1 orden importada' : `${nuevas.length} órdenes importadas`) +
+        (sustituir.length ? ` · ${sustituir.length} ${sustituir.length === 1 ? 'aportación periódica sustituida' : 'aportaciones periódicas sustituidas'}` : ''));
 }
 
 export function iniciarImportacionOrdenes(funcionesAyuda) {

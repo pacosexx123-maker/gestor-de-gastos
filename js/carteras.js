@@ -3,6 +3,8 @@
 // Cada cartera guarda las claves de sus activos (ISIN o nombre), así las nuevas
 // aportaciones de esos fondos, también las importadas, entran solas en la cartera.
 
+import { formatoEuros } from './utils.js?v=20';
+
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICONO_ELIMINAR = '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
 
@@ -65,7 +67,7 @@ function mostrarLista() {
             <div class="cartera-fila">
                 <div class="cartera-info">
                     <b>${ayudas.escaparHTML(cartera.nombre)}</b>
-                    <small>${activos.length} ${activos.length === 1 ? 'activo' : 'activos'} · ${total.toFixed(2)} €</small>
+                    <small>${activos.length} ${activos.length === 1 ? 'activo' : 'activos'} · ${formatoEuros(total)}</small>
                 </div>
                 <div class="acciones-fila">
                     <button class="btn-editar btn-editar-cartera" data-id="${cartera.id}" title="Editar cartera">${ICONO_EDITAR}</button>
@@ -111,7 +113,7 @@ function mostrarEdicion(id) {
                 <input type="checkbox" value="${ayudas.escaparHTML(activo.clave)}" ${marcado ? 'checked' : ''}>
                 <span class="cartera-activo-info">
                     <b>${ayudas.escaparHTML(activo.nombre)}</b>
-                    <small>${activo.isin ? `<span class="texto-isin">${ayudas.escaparHTML(activo.isin)}</span> · ` : ''}${activo.total.toFixed(2)} €${enOtra ? ` · <em>ahora en "${ayudas.escaparHTML(actual.nombre)}"</em>` : ''}</small>
+                    <small>${activo.isin ? `<span class="texto-isin">${ayudas.escaparHTML(activo.isin)}</span> · ` : ''}${formatoEuros(activo.total)}${enOtra ? ` · <em>ahora en "${ayudas.escaparHTML(actual.nombre)}"</em>` : ''}</small>
                 </span>
             </label>`;
     }).join('');

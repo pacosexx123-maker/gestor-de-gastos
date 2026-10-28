@@ -13,17 +13,78 @@
             var tema = localStorage.getItem('tema');
             if (tema === 'claro') document.documentElement.setAttribute('data-theme', 'light');
             else if (tema === 'oscuro') document.documentElement.setAttribute('data-theme', 'dark');
+            if (localStorage.getItem('bloqueo')) document.documentElement.classList.add('bloqueada');
         } catch (e) {}
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=17">
+    <link rel="stylesheet" href="css/style.css?v=20">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
 
     <main class="app-contenedor">
+
+      <!-- ================= SECCIÓN RESUMEN ================= -->
+      <div id="seccion-resumen" class="seccion oculto">
+        <div class="cabecera-seccion">
+            <span class="mes-etiqueta" id="resumen-mes">Este mes</span>
+            <h1 class="titulo-mes">Resumen</h1>
+        </div>
+
+        <section class="contenedor-totales contenedor-resumen">
+            <div class="tarjeta-total bg-ingreso clicable" id="resumen-ir-gastos" title="Ver gastos">
+                <div class="total-cabecera">
+                    <span class="total-icono"><svg viewBox="0 0 24 24"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/></svg></span>
+                    <h3>Ahorro del mes</h3>
+                </div>
+                <p class="total-importe" id="resumen-ahorro">0,00 €</p>
+                <span class="total-pie" id="resumen-ahorro-detalle"></span>
+                <span class="comparacion" id="resumen-tasa"></span>
+            </div>
+            <div class="tarjeta-total bg-invertido clicable" id="resumen-ir-inversiones" title="Ver inversiones">
+                <div class="total-cabecera">
+                    <span class="total-icono"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+                    <h3>Patrimonio</h3>
+                </div>
+                <p class="total-importe" id="resumen-patrimonio">0,00 €</p>
+                <span class="total-pie" id="resumen-patrimonio-detalle"></span>
+            </div>
+        </section>
+
+        <section class="tarjeta">
+            <div class="cabecera-tarjeta estatica">
+                <div class="cabecera-tarjeta-titulo">
+                    <span class="icono-tarjeta"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+                    <div><b>Últimos 6 meses</b><small>Ahorro (ingresos − gastos, incluidos los apartados) y tasa de ahorro</small></div>
+                </div>
+            </div>
+            <div id="resumen-meses" class="resumen-meses"></div>
+        </section>
+
+        <section class="tarjeta">
+            <div class="cabecera-tarjeta estatica">
+                <div class="cabecera-tarjeta-titulo">
+                    <span class="icono-tarjeta"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
+                    <div><b>Cuentas</b><small>Saldo de tus cuentas para calcular tu patrimonio</small></div>
+                </div>
+                <button type="button" id="btn-nueva-cuenta" class="btn-secundario btn-mini">+ Añadir</button>
+            </div>
+            <div id="lista-cuentas" class="lista-config lista-tarjeta"></div>
+        </section>
+
+        <section class="tarjeta">
+            <div class="cabecera-tarjeta estatica">
+                <div class="cabecera-tarjeta-titulo">
+                    <span class="icono-tarjeta"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
+                    <div><b>Objetivos de ahorro</b><small>Fondo de emergencia, viajes, entrada de un piso…</small></div>
+                </div>
+                <button type="button" id="btn-nuevo-objetivo" class="btn-secundario btn-mini">+ Añadir</button>
+            </div>
+            <div id="lista-objetivos" class="lista-objetivos"></div>
+        </section>
+      </div>
 
       <!-- ================= SECCIÓN GASTOS ================= -->
       <div id="seccion-gastos" class="seccion">
@@ -45,17 +106,18 @@
             </button>
         </div>
 
-        <!-- Totales -->
-        <section class="contenedor-totales">
-            <div class="tarjeta-total bg-ingreso">
+        <!-- Totales: ingresos, gasto personal y una tarjeta por apartado (Hogar, etc.) -->
+        <section class="contenedor-totales" id="totales-gastos">
+            <div class="tarjeta-total bg-ingreso clicable" id="btn-ver-ingresos" title="Ver desglose de ingresos">
                 <div class="total-cabecera">
                     <span class="total-icono">
                         <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
                     </span>
                     <h3>Ingresos</h3>
                 </div>
-                <p class="total-importe"><span id="ingresos-totales">0.00</span> €</p>
-                <span class="total-pie">Nómina del mes</span>
+                <p class="total-importe"><span id="ingresos-totales">0,00</span> €</p>
+                <span id="comparacion-ingresos" class="comparacion"></span>
+                <span class="total-pie">Del mes · Ver desglose <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
             </div>
             <div class="tarjeta-total bg-personal clicable" id="btn-ver-personal" title="Ver desglose personal">
                 <div class="total-cabecera">
@@ -64,26 +126,50 @@
                     </span>
                     <h3>Gasto personal</h3>
                 </div>
-                <p class="total-importe"><span id="gasto-total">0.00</span> €</p>
-                <span class="total-pie">Ver desglose
-                    <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-                </span>
-            </div>
-            <div class="tarjeta-total bg-hogar clicable" id="btn-ver-hogar" title="Ver desglose hogar">
-                <div class="total-cabecera">
-                    <span class="total-icono">
-                        <svg viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
-                    </span>
-                    <h3>Gasto hogar</h3>
-                </div>
-                <p class="total-importe"><span id="gasto-hogar">0.00</span> €</p>
-                <span class="total-pie">Acumulado · Ver desglose
-                    <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-                </span>
+                <p class="total-importe"><span id="gasto-total">0,00</span> €</p>
+                <span id="comparacion-gastos" class="comparacion"></span>
+                <span class="total-pie">Del mes · Ver desglose <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
             </div>
         </section>
 
-        <!-- Historial (desplegable) -->
+        <!-- Presupuestos del mes -->
+        <section class="tarjeta">
+            <div class="cabecera-tarjeta estatica">
+                <div class="cabecera-tarjeta-titulo">
+                    <span class="icono-tarjeta">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                    </span>
+                    <div>
+                        <b>Presupuestos</b>
+                        <small>Gasto personal del mes por categoría</small>
+                    </div>
+                </div>
+                <button type="button" id="btn-editar-presupuestos" class="btn-secundario btn-mini">Editar</button>
+            </div>
+            <div id="lista-presupuestos" class="lista-presupuestos"></div>
+        </section>
+
+        <!-- Análisis de gastos -->
+        <section class="tarjeta">
+            <div class="cabecera-tarjeta estatica">
+                <div class="cabecera-tarjeta-titulo">
+                    <span class="icono-tarjeta">
+                        <svg viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                    </span>
+                    <div>
+                        <b>Análisis</b>
+                        <small>Gasto personal</small>
+                    </div>
+                </div>
+                <div class="control-segmentado control-pequeno" id="selector-analisis" role="group" aria-label="Tipo de análisis">
+                    <button type="button" data-modo="categorias">Categorías</button>
+                    <button type="button" data-modo="meses">12 meses</button>
+                </div>
+            </div>
+            <div id="grafico-gastos"></div>
+        </section>
+
+        <!-- Historial (desplegable, con filtros) -->
         <section class="tarjeta">
             <div class="cabecera-tarjeta" id="cabecera-historial">
                 <div class="cabecera-tarjeta-titulo">
@@ -92,13 +178,22 @@
                     </span>
                     <div>
                         <b>Historial de movimientos</b>
-                        <small>Movimientos del mes seleccionado</small>
+                        <small id="resumen-historial">Movimientos del mes seleccionado</small>
                     </div>
                 </div>
                 <svg id="icono-flecha" class="icono-flecha" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
             <div id="contenedor-acordeon" class="acordeon-contenido">
                 <div class="acordeon-interior">
+                    <div class="filtros-operaciones filtros-movimientos">
+                        <div class="filtro-busqueda">
+                            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="search" id="filtro-mov-texto" placeholder="Buscar concepto o nota" autocomplete="off" aria-label="Buscar concepto o nota">
+                        </div>
+                        <select id="filtro-mov-categoria" aria-label="Filtrar por categoría"></select>
+                        <select id="filtro-mov-ambito" aria-label="Filtrar por personal o apartado"></select>
+                        <label class="opcion-check filtro-todos"><input type="checkbox" id="filtro-mov-todos"><span>Todos los meses</span></label>
+                    </div>
                     <div class="tabla-contenedor">
                         <table class="tabla tabla-historial">
                             <thead>
@@ -134,10 +229,14 @@
                     </span>
                     <h3>Total invertido</h3>
                 </div>
-                <p class="total-importe"><span id="inv-total">0.00</span> €</p>
+                <p class="total-importe"><span id="inv-total">0,00</span> €</p>
                 <div id="inv-valor-actual" class="linea-valor-actual oculto">
-                    <span>Valor actual <b id="inv-valor-total">0.00 €</b></span>
+                    <span>Valor actual <b id="inv-valor-total">0,00 €</b></span>
                     <span id="inv-rentabilidad-total" class="etiqueta-rentabilidad"></span>
+                </div>
+                <div id="inv-realizado" class="linea-valor-actual oculto">
+                    <span>Realizado en ventas</span>
+                    <span id="inv-realizado-importe" class="etiqueta-rentabilidad"></span>
                 </div>
                 <span class="total-pie" id="inv-num-operaciones">0 aportaciones</span>
             </div>
@@ -161,6 +260,22 @@
                 <p class="total-importe" id="inv-ultima-fecha">—</p>
                 <span class="total-pie" id="inv-ultima-activo">Sin aportaciones</span>
             </div>
+        </section>
+
+        <!-- Evolución de la cartera -->
+        <section class="tarjeta">
+            <div class="cabecera-tarjeta estatica">
+                <div class="cabecera-tarjeta-titulo">
+                    <span class="icono-tarjeta">
+                        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    </span>
+                    <div>
+                        <b>Evolución</b>
+                        <small>Lo aportado frente a lo que vale</small>
+                    </div>
+                </div>
+            </div>
+            <div id="grafico-evolucion-cartera"></div>
         </section>
 
         <!-- Distribución por activo -->
@@ -304,9 +419,64 @@
                 </div>
                 <div class="control-segmentado" data-grupo="inicio" role="group" aria-label="Pantalla al abrir la app">
                     <button type="button" data-valor="ultima">Última</button>
+                    <button type="button" data-valor="resumen">Resumen</button>
                     <button type="button" data-valor="gastos">Gastos</button>
                     <button type="button" data-valor="inversiones">Inversiones</button>
                 </div>
+            </div>
+        </section>
+
+        <!-- Gastos -->
+        <section class="tarjeta tarjeta-ajustes">
+            <h2 class="titulo-ajustes">Gastos</h2>
+            <div class="ajuste-fila">
+                <div class="ajuste-texto">
+                    <b>Categorías y apartados</b>
+                    <small>Crea tus categorías y apartados como "Hogar" (gastos que van aparte y no suman a tu gasto personal)</small>
+                </div>
+                <button type="button" id="btn-abrir-config-gastos" class="btn-secundario">Gestionar</button>
+            </div>
+            <div class="ajuste-fila ajuste-columna">
+                <div class="ajuste-texto">
+                    <b>Movimientos recurrentes</b>
+                    <small>Se apuntan solos cada mes al abrir la app (gastos fijos, nómina, aportaciones periódicas)</small>
+                </div>
+                <div id="lista-recurrentes" class="lista-config"></div>
+            </div>
+        </section>
+
+        <!-- Seguridad -->
+        <section class="tarjeta tarjeta-ajustes">
+            <h2 class="titulo-ajustes">Seguridad</h2>
+            <div class="ajuste-fila">
+                <div class="ajuste-texto">
+                    <b id="seguridad-estado">Bloqueo con PIN desactivado</b>
+                    <small id="seguridad-detalle"></small>
+                </div>
+                <div class="botones-ajuste">
+                    <button type="button" id="btn-activar-pin" class="btn-secundario">Activar</button>
+                    <button type="button" id="btn-cambiar-pin" class="btn-secundario oculto">Cambiar PIN</button>
+                    <button type="button" id="btn-desactivar-pin" class="btn-secundario btn-peligro-suave oculto">Desactivar</button>
+                </div>
+            </div>
+            <div class="ajuste-fila oculto" id="fila-biometria">
+                <div class="ajuste-texto">
+                    <b>Desbloquear con Face ID / huella</b>
+                    <small>Usa el desbloqueo del propio móvil; el PIN sigue sirviendo</small>
+                </div>
+                <label class="interruptor"><input type="checkbox" id="check-biometria"><span></span></label>
+            </div>
+            <div class="ajuste-fila oculto" id="fila-tiempo-bloqueo">
+                <div class="ajuste-texto">
+                    <b>Volver a bloquear</b>
+                    <small>Al volver a la app después de salir de ella</small>
+                </div>
+                <select id="ajuste-tiempo-bloqueo" class="ajuste-select">
+                    <option value="0">Siempre</option>
+                    <option value="1">Tras 1 minuto</option>
+                    <option value="5">Tras 5 minutos</option>
+                    <option value="15">Tras 15 minutos</option>
+                </select>
             </div>
         </section>
 
@@ -367,6 +537,12 @@
             </div>
             <div class="ajuste-fila">
                 <div class="ajuste-texto">
+                    <b id="ajuste-proteccion">Protección de los datos</b>
+                    <small id="ajuste-proteccion-detalle">Comprobando...</small>
+                </div>
+            </div>
+            <div class="ajuste-fila">
+                <div class="ajuste-texto">
                     <b>Borrar todos los datos</b>
                     <small>Elimina gastos, inversiones, carteras y archivos de este dispositivo. No se puede deshacer.</small>
                 </div>
@@ -389,6 +565,10 @@
 
     <!-- Barra de navegación inferior -->
     <nav class="barra-navegacion">
+        <button type="button" class="nav-item" data-seccion="resumen" aria-label="Resumen" title="Resumen">
+            <svg viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><polyline points="9 21 9 13 15 13 15 21"/></svg>
+            <span>Resumen</span>
+        </button>
         <button type="button" class="nav-item activo" data-seccion="gastos" aria-label="Gastos" title="Gastos">
             <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
             <span>Gastos</span>
@@ -434,25 +614,30 @@
         <span id="texto-btn-flotante">Nuevo movimiento</span>
     </button>
 
-    <!-- Modal formulario (va primero: main.js localiza su título con '.cabecera-formulario b') -->
+    <!-- Modal formulario de gasto / ingreso -->
     <div id="contenedor-formulario" class="modal-overlay oculto">
         <div class="modal-contenido">
-            <div class="cabecera-modal cabecera-formulario">
-                <b>Nuevo Movimiento</b>
-                <button id="btn-cerrar-formulario" class="btn-cerrar" aria-label="Cerrar">
-                    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+            <div class="cabecera-modal">
+                <b id="titulo-formulario-gasto">Nuevo movimiento</b>
+                <button id="btn-cerrar-formulario" class="btn-cerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
             <form id="formulario">
-                <div class="grupo-input">
-                    <label for="tipo-movimiento">Tipo de movimiento</label>
-                    <select id="tipo-movimiento">
-                        <option value="gasto">Gasto</option>
-                        <option value="ingreso">Ingreso</option>
-                    </select>
+                <div class="dos-columnas">
+                    <div class="grupo-input">
+                        <label for="tipo-movimiento">Tipo</label>
+                        <select id="tipo-movimiento">
+                            <option value="gasto">Gasto</option>
+                            <option value="ingreso">Ingreso</option>
+                        </select>
+                    </div>
+                    <div class="grupo-input">
+                        <label for="mov-apartado">¿Dónde va?</label>
+                        <select id="mov-apartado"></select>
+                    </div>
                 </div>
+                <p id="ayuda-apartado" class="texto-ayuda texto-ayuda-form oculto"></p>
                 <div class="grupo-input">
-                    <label for="categoria">Categoría</label>
+                    <label for="categoria" class="etiqueta-con-enlace">Categoría <button type="button" id="btn-config-desde-formulario" class="enlace">Gestionar categorías y apartados</button></label>
                     <select id="categoria"></select>
                 </div>
                 <div class="grupo-input">
@@ -462,19 +647,65 @@
                 <div class="dos-columnas">
                     <div class="grupo-input">
                         <label for="cantidad">Cantidad (€)</label>
-                        <input type="number" id="cantidad" placeholder="0.00" step="0.01" inputmode="decimal" required>
+                        <input type="number" id="cantidad" placeholder="0.00" step="0.01" min="0" inputmode="decimal" required>
                     </div>
                     <div class="grupo-input">
                         <label for="fecha">Fecha</label>
                         <input type="date" id="fecha" required>
                     </div>
                 </div>
-                <button type="submit" class="btn-guardar">Guardar Movimiento</button>
+                <div class="grupo-input">
+                    <label for="mov-nota">Nota <em class="opcional">(opcional)</em></label>
+                    <textarea id="mov-nota" rows="2" placeholder="Detalles que quieras recordar"></textarea>
+                </div>
+                <label class="opcion-check" id="grupo-recurrente">
+                    <input type="checkbox" id="mov-recurrente">
+                    <span>Repetir cada mes <em>(se apuntará solo el mismo día)</em></span>
+                </label>
+                <button type="submit" id="btn-guardar-gasto" class="btn-guardar">Guardar movimiento</button>
             </form>
         </div>
     </div>
 
-    <!-- Modal de desglose (Personal y Hogar) -->
+    <!-- Modal presupuestos -->
+    <div id="modal-presupuestos" class="modal-overlay oculto">
+        <div class="modal-contenido">
+            <div class="cabecera-modal">
+                <div>
+                    <b>Presupuestos mensuales</b>
+                    <small class="subtitulo-modal">Cuánto quieres gastar al mes en cada categoría (gasto personal)</small>
+                </div>
+                <button id="btn-cerrar-presupuestos" class="btn-cerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+            <div id="lista-editar-presupuestos" class="lista-editar-presupuestos"></div>
+            <p class="texto-ayuda">Déjalo vacío para no poner límite. Te avisaremos al pasarte.</p>
+            <button type="button" id="btn-guardar-presupuestos" class="btn-guardar">Guardar presupuestos</button>
+        </div>
+    </div>
+
+    <!-- Modal categorías y apartados -->
+    <div id="modal-config-gastos" class="modal-overlay oculto">
+        <div class="modal-contenido">
+            <div class="cabecera-modal">
+                <b>Categorías y apartados</b>
+                <button id="btn-cerrar-config-gastos" class="btn-cerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+            <h3 class="titulo-bloque">Apartados</h3>
+            <p class="texto-ayuda">Gastos que van aparte, como "Hogar": tienen su propia tarjeta y no se suman a tu gasto personal. Los ingresos que asignes a un apartado (por ejemplo, un Bizum que te devuelven) se le restan.</p>
+            <div id="config-apartados" class="lista-config"></div>
+            <button type="button" id="btn-nuevo-apartado" class="btn-secundario">+ Nuevo apartado</button>
+
+            <h3 class="titulo-bloque">Categorías de gasto</h3>
+            <div id="config-categorias-gasto" class="lista-config"></div>
+            <button type="button" id="btn-nueva-categoria-gasto" class="btn-secundario">+ Nueva categoría de gasto</button>
+
+            <h3 class="titulo-bloque">Categorías de ingreso</h3>
+            <div id="config-categorias-ingreso" class="lista-config"></div>
+            <button type="button" id="btn-nueva-categoria-ingreso" class="btn-secundario">+ Nueva categoría de ingreso</button>
+        </div>
+    </div>
+
+    <!-- Modal de desglose (ingresos, gasto personal o un apartado) -->
     <div id="modal-detalle" class="modal-overlay oculto">
         <div class="modal-contenido modal-ancho">
             <div class="cabecera-modal">
@@ -510,6 +741,10 @@
                 </button>
             </div>
             <form id="formulario-inversion">
+                <div class="control-segmentado control-ancho grupo-segmentado" id="operacion-inversion" role="group" aria-label="Compra o venta">
+                    <button type="button" data-valor="compra">Compra</button>
+                    <button type="button" data-valor="venta">Venta</button>
+                </div>
                 <div class="grupo-input">
                     <label for="inv-nombre">Fondo / acción</label>
                     <input type="text" id="inv-nombre" list="lista-nombres-activos" placeholder="Ej. Vanguard Global Stock Index" autocomplete="off" required>
@@ -539,7 +774,7 @@
                     </div>
                 </div>
                 <div id="bloque-solo-importe" class="grupo-input oculto">
-                    <label for="inv-importe-solo">Importe total pagado (€)</label>
+                    <label for="inv-importe-solo" id="etiqueta-solo-importe">Importe total pagado (€)</label>
                     <input type="number" id="inv-importe-solo" placeholder="0.00" step="any" min="0" inputmode="decimal">
                 </div>
                 <div id="bloque-detalle-importe">
@@ -549,7 +784,7 @@
                         <input type="number" id="inv-cantidad" placeholder="0" step="any" min="0" inputmode="decimal" required>
                     </div>
                     <div class="grupo-input">
-                        <label for="inv-precio">Precio por título (€)</label>
+                        <label for="inv-precio" id="etiqueta-precio-inversion">Precio por título (€)</label>
                         <input type="number" id="inv-precio" placeholder="0.00" step="any" min="0" inputmode="decimal" required>
                     </div>
                 </div>
@@ -559,7 +794,7 @@
                         <input type="number" id="inv-comision" placeholder="0.00" step="any" min="0" inputmode="decimal">
                     </div>
                     <div class="grupo-input">
-                        <label for="inv-importe-final">Importe final pagado (€)</label>
+                        <label for="inv-importe-final" id="etiqueta-final-inversion">Importe final pagado (€)</label>
                         <input type="number" id="inv-importe-final" placeholder="0.00" step="any" min="0" inputmode="decimal">
                     </div>
                 </div>
@@ -571,13 +806,17 @@
                 </div>
                 <div class="resumen-formulario">
                     <div>
-                        <span>Total pagado</span>
-                        <small id="inv-desglose-formulario">0.00 € en títulos + 0.00 € de comisión</small>
+                        <span id="texto-total-formulario">Total pagado</span>
+                        <small id="inv-desglose-formulario">0,00 € en títulos + 0,00 € de comisión</small>
                     </div>
-                    <b><span id="inv-total-formulario">0.00</span> €</b>
+                    <b><span id="inv-total-formulario">0,00</span> €</b>
                 </div>
                 <p id="inv-error-comision" class="texto-error oculto">El importe final no puede ser menor que títulos × precio.</p>
-                <button type="submit" id="btn-guardar-inversion" class="btn-guardar">Guardar Inversión</button>
+                <label class="opcion-check" id="grupo-inv-recurrente">
+                    <input type="checkbox" id="inv-recurrente">
+                    <span>Aportación periódica <em>(se apuntará cada mes el mismo día y por el mismo importe; al importar la orden real, la sustituye)</em></span>
+                </label>
+                <button type="submit" id="btn-guardar-inversion" class="btn-guardar">Guardar</button>
             </form>
         </div>
     </div>
@@ -731,8 +970,133 @@
         </div>
     </div>
 
+    <!-- Modal cuenta -->
+    <div id="modal-cuenta" class="modal-overlay oculto">
+        <div class="modal-contenido">
+            <div class="cabecera-modal">
+                <b id="titulo-modal-cuenta">Nueva cuenta</b>
+                <button id="btn-cerrar-cuenta" class="btn-cerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+            <form id="formulario-cuenta">
+                <div class="grupo-input">
+                    <label for="cuenta-nombre">Nombre</label>
+                    <input type="text" id="cuenta-nombre" placeholder="Ej. Cuenta nómina, Efectivo, Cuenta remunerada" required>
+                </div>
+                <div class="grupo-input">
+                    <label for="cuenta-saldo">Saldo actual (€)</label>
+                    <input type="number" id="cuenta-saldo" step="any" inputmode="decimal" placeholder="0.00" required>
+                </div>
+                <button type="submit" class="btn-guardar">Guardar cuenta</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal objetivo de ahorro -->
+    <div id="modal-objetivo" class="modal-overlay oculto">
+        <div class="modal-contenido">
+            <div class="cabecera-modal">
+                <b id="titulo-modal-objetivo">Nuevo objetivo</b>
+                <button id="btn-cerrar-objetivo" class="btn-cerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+            <form id="formulario-objetivo">
+                <div class="grupo-input">
+                    <label for="objetivo-nombre">Nombre</label>
+                    <input type="text" id="objetivo-nombre" placeholder="Ej. Fondo de emergencia" required>
+                </div>
+                <div class="dos-columnas">
+                    <div class="grupo-input">
+                        <label for="objetivo-meta">Meta (€)</label>
+                        <input type="number" id="objetivo-meta" step="any" min="0" inputmode="decimal" placeholder="6000" required>
+                    </div>
+                    <div class="grupo-input">
+                        <label for="objetivo-ahorrado">Ya ahorrado (€)</label>
+                        <input type="number" id="objetivo-ahorrado" step="any" min="0" inputmode="decimal" placeholder="0">
+                    </div>
+                </div>
+                <div class="grupo-input">
+                    <label for="objetivo-fecha">Fecha límite <em class="opcional">(opcional)</em></label>
+                    <input type="date" id="objetivo-fecha">
+                </div>
+                <p class="texto-ayuda">Actualiza "Ya ahorrado" cuando apartes dinero; si pones fecha límite, verás cuánto necesitas ahorrar al mes.</p>
+                <button type="submit" class="btn-guardar">Guardar objetivo</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal PIN (activar, cambiar o desactivar el bloqueo) -->
+    <div id="modal-pin" class="modal-overlay oculto">
+        <div class="modal-contenido">
+            <div class="cabecera-modal">
+                <b id="titulo-modal-pin">Activar bloqueo con PIN</b>
+                <button id="btn-cerrar-pin" class="btn-cerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+            <form id="formulario-pin">
+                <div class="grupo-input" id="grupo-pin-actual">
+                    <label for="pin-actual">PIN actual</label>
+                    <input type="password" id="pin-actual" inputmode="numeric" autocomplete="off" maxlength="8">
+                </div>
+                <div id="grupo-pin-nuevo">
+                    <div class="dos-columnas">
+                        <div class="grupo-input">
+                            <label for="pin-nuevo">Nuevo PIN (4 a 8 números)</label>
+                            <input type="password" id="pin-nuevo" inputmode="numeric" autocomplete="off" maxlength="8">
+                        </div>
+                        <div class="grupo-input">
+                            <label for="pin-repetir">Repetir PIN</label>
+                            <input type="password" id="pin-repetir" inputmode="numeric" autocomplete="off" maxlength="8">
+                        </div>
+                    </div>
+                    <p class="texto-ayuda">Si olvidas el PIN tendrás que borrar los datos del navegador y restaurar una copia de seguridad, así que guárdalo bien.</p>
+                </div>
+                <p id="error-pin" class="texto-error oculto"></p>
+                <button type="submit" id="btn-guardar-pin" class="btn-guardar">Guardar PIN</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Pantalla de bloqueo -->
+    <div id="pantalla-bloqueo" class="pantalla-bloqueo oculto" role="dialog" aria-label="App bloqueada">
+        <div class="bloqueo-contenido">
+            <img src="icono.png" alt="" class="bloqueo-logo">
+            <b>Introduce tu PIN</b>
+            <div id="bloqueo-puntos" class="bloqueo-puntos"></div>
+            <p id="bloqueo-error" class="bloqueo-error"></p>
+            <div class="bloqueo-teclado">
+                <button type="button" data-tecla="1">1</button><button type="button" data-tecla="2">2</button><button type="button" data-tecla="3">3</button>
+                <button type="button" data-tecla="4">4</button><button type="button" data-tecla="5">5</button><button type="button" data-tecla="6">6</button>
+                <button type="button" data-tecla="7">7</button><button type="button" data-tecla="8">8</button><button type="button" data-tecla="9">9</button>
+                <button type="button" id="bloqueo-biometria" class="tecla-secundaria oculto" aria-label="Desbloquear con Face ID o huella">
+                    <svg viewBox="0 0 24 24"><path d="M12 11c0 3.5-1 6.5-3 9"/><path d="M8 4.5A8 8 0 0 1 20 11c0 1.5-.2 3-.6 4.4"/><path d="M4 9a8 8 0 0 1 1.6-3"/><path d="M4.5 15c.3-1.3.5-2.6.5-4a7 7 0 0 1 .2-1.6"/><path d="M15.5 20.5c.5-1.5.9-3 1.1-4.6"/><path d="M8.5 11a3.5 3.5 0 0 1 7 0c0 1.5-.1 3-.4 4.4"/></svg>
+                </button>
+                <button type="button" data-tecla="0">0</button>
+                <button type="button" data-tecla="borrar" class="tecla-secundaria" aria-label="Borrar">
+                    <svg viewBox="0 0 24 24"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+                </button>
+            </div>
+            <button type="button" id="bloqueo-entrar" class="btn-guardar bloqueo-entrar">Entrar</button>
+        </div>
+    </div>
+
     <!-- Notificación -->
-    <div id="toast-notificacion" class="toast">Mensaje</div>
+    <div id="toast-notificacion" class="toast" role="status" aria-live="polite"><span class="toast-texto">Mensaje</span><button type="button" class="toast-accion oculto">Deshacer</button></div>
+
+    <!-- Funcionar sin conexión y pedir al navegador que no borre los datos -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('sw.js').catch(function () {});
+                // En la primera visita los archivos ya se cargaron antes que el service worker: se le pasan para guardarlos
+                navigator.serviceWorker.ready.then(function (registro) {
+                    var archivos = [location.href].concat(performance.getEntriesByType('resource').map(function (r) { return r.name; }))
+                        .filter(function (url) { return url.indexOf(location.origin) === 0; });
+                    if (registro.active) registro.active.postMessage({ tipo: 'guardar', archivos: archivos });
+                });
+            });
+        }
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().catch(function () {});
+        }
+    </script>
 
     <!-- Si la app no arranca, se muestra el motivo en lugar de "Cargando mes..." -->
     <script>
@@ -756,6 +1120,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=17"></script>
+    <script type="module" src="js/main.js?v=20"></script>
 </body>
 </html>
