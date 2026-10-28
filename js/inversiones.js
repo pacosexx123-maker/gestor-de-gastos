@@ -1,17 +1,18 @@
 import {
     obtenerFechaHoy, cargarInversionesDesdeMemoria, guardarInversionesEnMemoria,
     calcularTotalInversion, calcularResumenPorActivo, calcularPosiciones, claveActivo, tieneDetalleTitulos, esVenta,
-    formatoNumero, formatoEuros, formatoPorcentaje, formatoDecimalVariable, escaparHTML as escaparTexto, leerImporte
-} from './utils.js?v=20';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha } from './excel.js?v=20';
-import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=20';
-import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros, dibujarLineas } from './graficos.js?v=20';
+    formatoNumero, formatoEuros, formatoPorcentaje, formatoDecimalVariable, escaparHTML as escaparTexto, leerImporte,
+    sumarMeses, formatoFechaES
+} from './utils.js?v=23';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=23';
+import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=23';
+import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros, dibujarLineas } from './graficos.js?v=23';
 import {
     iniciarValoraciones, abrirValorActual, valorActual, precioActual,
     rentabilidad, formatoRentabilidad, claseRentabilidad
-} from './valoraciones.js?v=20';
-import { leerDato, guardarDato } from './datos.js?v=20';
-import { crearRecurrente } from './recurrentes.js?v=20';
+} from './valoraciones.js?v=23';
+import { leerDato, guardarDato } from './datos.js?v=23';
+import { crearRecurrente } from './recurrentes.js?v=23';
 
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICONO_DESPLEGAR = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -605,65 +606,245 @@ function renderizarOperaciones() {
     });
 }
 
-const COLUMNAS_EXCEL_INVERSIONES = [
-    { titulo: 'Fecha', ancho: 12 },
-    { titulo: 'Operación', ancho: 11 },
-    { titulo: 'Activo', ancho: 36 },
-    { titulo: 'ISIN', ancho: 15 },
-    { titulo: 'Tipo', ancho: 10 },
-    { titulo: 'Títulos', ancho: 12 },
-    { titulo: 'Precio por título (€)', ancho: 20 },
-    { titulo: 'Comisión (€)', ancho: 14 },
-    { titulo: 'Importe (€)', ancho: 14 }
-];
+// --- EXCEL ---
+// Hoja "Total": cifras clave, posiciones con rentabilidad, aportaciones por mes, evolución y ventas, con gráficas.
+// Hoja "Operaciones": todas, con filtros. Y una hoja por mes.
 
-function filasExcelInversiones(lista) {
-    const filas = ordenarPorFecha(lista).map(inv => [
-        { v: inv.fecha, tipo: 'fecha' },
-        { v: esVenta(inv) ? 'Venta' : 'Compra' },
-        { v: inv.nombre || 'Sin nombre' },
-        { v: inv.isin || '' },
-        { v: inv.tipo || 'Otro' },
-        tieneDetalleTitulos(inv) ? { v: inv.cantidad, tipo: 'numero' } : null,
-        tieneDetalleTitulos(inv) ? { v: inv.precio, tipo: 'dinero' } : null,
-        { v: parseFloat(inv.comision || 0), tipo: 'dinero' },
-        { v: parseFloat(calcularTotalInversion(inv).toFixed(2)), tipo: 'dinero' }
-    ]);
-    const aportado = lista.filter(inv => !esVenta(inv)).reduce((acumulado, inv) => acumulado + calcularTotalInversion(inv), 0);
-    const vendido = lista.filter(esVenta).reduce((acumulado, inv) => acumulado + calcularTotalInversion(inv), 0);
-    const comisiones = lista.reduce((acumulado, inv) => acumulado + parseFloat(inv.comision || 0), 0);
-    const fila = (texto, valor) => [null, null, null, null, null, null, null, { v: texto, negrita: true }, { v: parseFloat(valor.toFixed(2)), tipo: 'dinero', negrita: true }];
-    filas.push([], fila('Total comisiones', comisiones), fila('Total aportado', aportado));
-    if (vendido > 0) filas.push(fila('Total vendido', vendido));
-    return filas;
+function filaCabeceraExcel(hoja, titulos, numericasDesde) {
+    return hoja.anadir(titulos.map((t, i) => ({ v: t, estilo: 'cabecera', derecha: i >= numericasDesde })));
 }
 
-// Libro Excel: hoja "Total" con todo + resumen por activo, y una hoja por cada mes
-export function generarExcelInversiones() {
-    if (inversiones.length === 0) return null;
+function cifrasClaveExcel(hoja, cifras) {
+    const filaEtiquetas = hoja.anadir([]);
+    const filaValores = hoja.anadir([]);
+    cifras.forEach((cifra, i) => {
+        const col = i * 2;
+        hoja.filas[filaEtiquetas - 1][col] = { v: cifra.etiqueta, estilo: 'kpiEtiqueta' };
+        hoja.filas[filaEtiquetas - 1][col + 1] = { v: '', estilo: 'kpiEtiqueta' };
+        hoja.filas[filaValores - 1][col] = { ...cifra.valor, estilo: 'kpiValor' };
+        hoja.filas[filaValores - 1][col + 1] = { v: '', estilo: 'kpiEtiqueta' };
+        hoja.combinadas.push(`${ref(col, filaEtiquetas)}:${ref(col + 1, filaEtiquetas)}`, `${ref(col, filaValores)}:${ref(col + 1, filaValores)}`);
+    });
+}
 
-    const filasTotal = filasExcelInversiones(inversiones);
-    filasTotal.push([]);
-    filasTotal.push([null, null, { v: 'Resumen por activo (invertido actual y beneficio realizado)', negrita: true }]);
-    calcularPosiciones(inversiones).forEach(activo => {
-        filasTotal.push([
-            null,
-            { v: activo.cerrada ? 'Cerrada' : 'Abierta' },
-            { v: activo.nombre },
-            { v: activo.isin },
-            { v: activo.tipo },
-            activo.participaciones > 0 ? { v: parseFloat(activo.participaciones.toFixed(6)), tipo: 'numero' } : null,
-            null,
-            Math.abs(activo.realizado) > 0.005 ? { v: parseFloat(activo.realizado.toFixed(2)), tipo: 'dinero' } : null,
-            { v: parseFloat(activo.total.toFixed(2)), tipo: 'dinero' }
+const colorIndice = i => (i < COLORES_GRAFICO.length ? COLORES_GRAFICO[i] : COLOR_OTROS);
+
+// Lista de operaciones con filtros y totales (con fórmulas)
+function listaOperaciones(hoja, lista, realizadoPorOperacion) {
+    const cabecera = filaCabeceraExcel(hoja, ['Fecha', 'Operación', 'Activo', 'ISIN', 'Tipo', 'Títulos', 'Precio', 'Comisión', 'Importe', 'Beneficio realizado'], 5);
+    lista.map(inv => ({ inv, indice: inversiones.indexOf(inv) }))
+        .sort((a, b) => (a.inv.fecha || '').localeCompare(b.inv.fecha || ''))
+        .forEach(({ inv, indice }) => {
+            const realizado = realizadoPorOperacion[indice];
+            hoja.anadir([
+                { v: inv.fecha, tipo: 'fecha' },
+                { v: esVenta(inv) ? 'Venta' : 'Compra' },
+                { v: inv.nombre || 'Sin nombre' },
+                { v: inv.isin || '' },
+                { v: inv.tipo || 'Otro' },
+                tieneDetalleTitulos(inv) ? { v: parseFloat(inv.cantidad), tipo: 'numero' } : null,
+                tieneDetalleTitulos(inv) ? { v: parseFloat(inv.precio), tipo: 'dinero' } : null,
+                parseFloat(inv.comision) > 0 ? { v: parseFloat(inv.comision), tipo: 'dinero' } : null,
+                { v: parseFloat(calcularTotalInversion(inv).toFixed(2)), tipo: 'dinero' },
+                realizado !== undefined ? { v: parseFloat(realizado.toFixed(2)), tipo: 'dineroSigno' } : null
+            ]);
+        });
+    const ultima = Math.max(hoja.filaActual, cabecera + 1);
+    const rango = c => `${ref(c, cabecera + 1)}:${ref(c, ultima)}`;
+    const aportado = lista.filter(i => !esVenta(i)).reduce((s, i) => s + calcularTotalInversion(i), 0);
+    const vendido = lista.filter(esVenta).reduce((s, i) => s + calcularTotalInversion(i), 0);
+    const comisiones = lista.reduce((s, i) => s + (parseFloat(i.comision) || 0), 0);
+    const realizado = lista.reduce((s, i) => s + (realizadoPorOperacion[inversiones.indexOf(i)] || 0), 0);
+    hoja.filtro = `A${cabecera}:J${ultima}`;
+    hoja.anadir([]);
+    const total = (texto, celda) => hoja.anadir([null, null, null, null, null, null, null, { v: texto, estilo: 'total' }, celda]);
+    total('Total aportado', { f: `SUMIF(${rango(1)},"Compra",${rango(8)})`, v: aportado, tipo: 'dinero', estilo: 'total' });
+    if (vendido > 0) total('Total vendido', { f: `SUMIF(${rango(1)},"Venta",${rango(8)})`, v: vendido, tipo: 'dinero', estilo: 'total' });
+    total('Comisiones', { f: `SUM(${rango(7)})`, v: comisiones, tipo: 'dinero', estilo: 'total' });
+    if (vendido > 0) total('Beneficio realizado', { f: `SUM(${rango(9)})`, v: realizado, tipo: 'dineroSigno', estilo: 'total' });
+}
+
+function hojaTotalInversiones(posiciones, realizadoPorOperacion) {
+    const hoja = new Hoja('Total');
+    hoja.anchos = [30, 15, 10, 16, 12, 14, 14, 15, 13, 10, 3];
+    const abiertas = posiciones.filter(p => !p.cerrada).sort((a, b) => b.total - a.total);
+    const filas = abiertas.map(p => {
+        const valor = valorActual(p.clave, p.participaciones, p.total);
+        const cartera = carteraDeActivo(p.clave);
+        return { ...p, valor: valor === null ? p.total : valor, valorado: valor !== null, cartera: cartera ? cartera.nombre : '' };
+    });
+    const invertido = filas.reduce((s, p) => s + p.total, 0);
+    const valor = filas.reduce((s, p) => s + p.valor, 0);
+    const realizado = posiciones.reduce((s, p) => s + p.realizado, 0);
+    const aportado = inversiones.filter(i => !esVenta(i)).reduce((s, i) => s + calcularTotalInversion(i), 0);
+    const vendido = inversiones.filter(esVenta).reduce((s, i) => s + calcularTotalInversion(i), 0);
+
+    hoja.anadir([{ v: 'Inversiones', estilo: 'titulo' }]);
+    hoja.anadir([{ v: `Generado el ${formatoFechaES(obtenerFechaHoy())} con Gestor de Gastos · El valor actual es el que has indicado en la app`, estilo: 'nota' }]);
+    hoja.anadir([]);
+    const filaTotal = 3 + 2 + 1 + 2 + 1 + 2 + filas.length + 1; // cifras (2 filas x2), huecos, sección y cabecera
+    cifrasClaveExcel(hoja, [
+        { etiqueta: 'Invertido ahora', valor: { f: `F${filaTotal}`, v: invertido, tipo: 'dinero' } },
+        { etiqueta: 'Valor actual', valor: { f: `G${filaTotal}`, v: valor, tipo: 'dinero' } },
+        { etiqueta: 'Rentabilidad', valor: { f: `H${filaTotal}`, v: valor - invertido, tipo: 'dineroSigno' } },
+        { etiqueta: 'Rentabilidad %', valor: { f: `IF(F${filaTotal}>0,H${filaTotal}/F${filaTotal},"")`, v: invertido > 0 ? (valor - invertido) / invertido : '', tipo: 'porcentajeSigno' } }
+    ]);
+    hoja.anadir([]);
+    cifrasClaveExcel(hoja, [
+        { etiqueta: 'Total aportado', valor: { v: aportado, tipo: 'dinero' } },
+        { etiqueta: 'Total vendido', valor: { v: vendido, tipo: 'dinero' } },
+        { etiqueta: 'Beneficio realizado', valor: { v: realizado, tipo: 'dineroSigno' } },
+        { etiqueta: 'Activos', valor: { v: filas.length, tipo: 'numero' } }
+    ]);
+    hoja.anadir([]);
+
+    hoja.anadir([{ v: 'Posiciones abiertas', estilo: 'seccion' }]);
+    const cabecera = filaCabeceraExcel(hoja, ['Activo', 'ISIN', 'Tipo', 'Cartera', 'Títulos', 'Invertido', 'Valor actual', 'Rentabilidad', 'Rentab. %', 'Peso'], 4);
+    filas.forEach(p => {
+        const f = hoja.filaActual + 1;
+        hoja.anadir([
+            { v: p.valorado ? p.nombre : `${p.nombre} (sin valorar)` },
+            { v: p.isin }, { v: p.tipo }, { v: p.cartera },
+            p.participaciones > 0 ? { v: parseFloat(p.participaciones.toFixed(6)), tipo: 'numero' } : null,
+            { v: parseFloat(p.total.toFixed(2)), tipo: 'dinero' },
+            { v: parseFloat(p.valor.toFixed(2)), tipo: 'dinero' },
+            { f: `G${f}-F${f}`, v: p.valor - p.total, tipo: 'dineroSigno' },
+            { f: `IF(F${f}>0,H${f}/F${f},"")`, v: p.total > 0 ? (p.valor - p.total) / p.total : '', tipo: 'porcentajeSigno' },
+            { f: `F${f}/$F$${filaTotal}`, v: invertido > 0 ? p.total / invertido : 0, tipo: 'porcentaje' }
         ]);
     });
+    const primera = cabecera + 1, ultima = Math.max(hoja.filaActual, primera);
+    hoja.anadir([{ v: 'Total', estilo: 'total' }, { v: '', estilo: 'total' }, { v: '', estilo: 'total' }, { v: '', estilo: 'total' }, { v: '', estilo: 'total' },
+        { f: `SUM(F${primera}:F${ultima})`, v: invertido, tipo: 'dinero', estilo: 'total' },
+        { f: `SUM(G${primera}:G${ultima})`, v: valor, tipo: 'dinero', estilo: 'total' },
+        { f: `G${filaTotal}-F${filaTotal}`, v: valor - invertido, tipo: 'dineroSigno', estilo: 'total' },
+        { f: `IF(F${filaTotal}>0,H${filaTotal}/F${filaTotal},"")`, v: invertido > 0 ? (valor - invertido) / invertido : '', tipo: 'porcentajeSigno', estilo: 'total' },
+        { v: filas.length ? 1 : 0, tipo: 'porcentaje', estilo: 'total' }]);
+    if (filas.some(p => !p.valorado)) hoja.anadir([{ v: 'Los activos sin valor actual cuentan por lo invertido.', estilo: 'nota' }]);
 
-    const hojas = [{ nombre: 'Total', columnas: COLUMNAS_EXCEL_INVERSIONES, filas: filasTotal }];
-    agruparPorMes(inversiones).forEach(mes => {
-        hojas.push({ nombre: mes.nombre, columnas: COLUMNAS_EXCEL_INVERSIONES, filas: filasExcelInversiones(mes.elementos) });
-    });
-    return crearLibroExcel(hojas);
+    if (filas.length) {
+        const categorias = { rango: `A${primera}:A${ultima}`, valores: filas.map(p => p.valorado ? p.nombre : `${p.nombre} (sin valorar)`) };
+        hoja.graficos.push({
+            tipo: 'anillo', titulo: 'Distribución de lo invertido', ancla: { col: 11, fila: 3, ancho: 8, alto: 17 }, categorias,
+            series: [{ nombre: 'Invertido', rango: `F${primera}:F${ultima}`, valores: filas.map(p => p.total), colores: filas.map((_, i) => colorIndice(i)) }]
+        });
+        hoja.graficos.push({
+            tipo: 'columnas', titulo: 'Invertido y valor actual por activo', ancla: { col: 11, fila: 21, ancho: 8, alto: 16 }, categorias,
+            series: [
+                { nombre: 'Invertido', rango: `F${primera}:F${ultima}`, valores: filas.map(p => p.total), color: COLOR_OTROS },
+                { nombre: 'Valor actual', rango: `G${primera}:G${ultima}`, valores: filas.map(p => p.valor), color: COLORES_GRAFICO[0] }
+            ]
+        });
+    }
+
+    // Aportaciones y ventas mes a mes
+    const meses = [];
+    const fechas = inversiones.map(i => (i.fecha || '').substring(0, 7)).filter(m => /^\d{4}-\d{2}$/.test(m)).sort();
+    if (fechas.length) for (let m = fechas[0]; m <= fechas[fechas.length - 1]; m = sumarMeses(m, 1)) meses.push(m);
+    if (meses.length) {
+        hoja.anadir([]);
+        hoja.anadir([{ v: 'Aportaciones por mes', estilo: 'seccion' }]);
+        const cab = filaCabeceraExcel(hoja, ['Mes', 'Aportado', 'Vendido', 'Neto'], 1);
+        const datos = meses.map(m => {
+            const delMes = inversiones.filter(i => (i.fecha || '').startsWith(m));
+            return { mes: m, aportado: delMes.filter(i => !esVenta(i)).reduce((s, i) => s + calcularTotalInversion(i), 0), vendido: delMes.filter(esVenta).reduce((s, i) => s + calcularTotalInversion(i), 0) };
+        });
+        datos.forEach(d => {
+            const f = hoja.filaActual + 1;
+            hoja.anadir([{ v: nombreHojaMes(d.mes) }, { v: d.aportado, tipo: 'dinero' }, { v: d.vendido, tipo: 'dinero' }, { f: `B${f}-C${f}`, v: d.aportado - d.vendido, tipo: 'dineroSigno' }]);
+        });
+        const pm = cab + 1, um = hoja.filaActual;
+        hoja.anadir([{ v: 'Total', estilo: 'total' }, { f: `SUM(B${pm}:B${um})`, v: aportado, tipo: 'dinero', estilo: 'total' }, { f: `SUM(C${pm}:C${um})`, v: vendido, tipo: 'dinero', estilo: 'total' }, { f: `SUM(D${pm}:D${um})`, v: aportado - vendido, tipo: 'dineroSigno', estilo: 'total' }]);
+        const series = [{ nombre: 'Aportado', rango: `B${pm}:B${um}`, valores: datos.map(d => d.aportado), color: COLORES_GRAFICO[0] }];
+        if (vendido > 0) series.push({ nombre: 'Vendido', rango: `C${pm}:C${um}`, valores: datos.map(d => d.vendido), color: COLORES_GRAFICO[2] });
+        hoja.graficos.push({ tipo: 'columnas', titulo: 'Aportaciones por mes', ancla: { col: 11, fila: 38, ancho: 8, alto: 16 }, sinLeyenda: series.length === 1,
+            categorias: { rango: `A${pm}:A${um}`, valores: datos.map(d => nombreHojaMes(d.mes)) }, series });
+    }
+
+    // Evolución de la cartera (puntos guardados cada día que se vio la cartera valorada)
+    if (historicoValor.length >= 2) {
+        hoja.anadir([]);
+        hoja.anadir([{ v: 'Evolución de la cartera', estilo: 'seccion' }]);
+        const cab = filaCabeceraExcel(hoja, ['Fecha', 'Aportado', 'Valor', 'Diferencia'], 1);
+        historicoValor.forEach(p => {
+            const f = hoja.filaActual + 1;
+            hoja.anadir([{ v: formatoFechaES(p.fecha) }, { v: p.invertido, tipo: 'dinero' }, { v: p.valor, tipo: 'dinero' }, { f: `C${f}-B${f}`, v: p.valor - p.invertido, tipo: 'dineroSigno' }]);
+        });
+        const pe = cab + 1, ue = hoja.filaActual;
+        hoja.graficos.push({
+            tipo: 'lineas', titulo: 'Evolución: aportado y valor', ancla: { col: 11, fila: 55, ancho: 8, alto: 16 },
+            categorias: { rango: `A${pe}:A${ue}`, valores: historicoValor.map(p => formatoFechaES(p.fecha)) },
+            series: [
+                { nombre: 'Aportado', rango: `B${pe}:B${ue}`, valores: historicoValor.map(p => p.invertido), color: COLOR_OTROS, discontinua: true },
+                { nombre: 'Valor', rango: `C${pe}:C${ue}`, valores: historicoValor.map(p => p.valor), color: COLORES_GRAFICO[0], puntos: true }
+            ]
+        });
+    }
+
+    // Activos con ventas
+    const conVentas = posiciones.filter(p => p.ventas > 0);
+    if (conVentas.length) {
+        hoja.anadir([]);
+        hoja.anadir([{ v: 'Ventas y beneficio realizado', estilo: 'seccion' }]);
+        filaCabeceraExcel(hoja, ['Activo', 'Estado', 'Aportado', 'Recibido', 'Beneficio'], 2);
+        conVentas.forEach(p => hoja.anadir([{ v: p.nombre }, { v: p.cerrada ? 'Cerrada' : 'Abierta' }, { v: p.aportado, tipo: 'dinero' }, { v: p.ventas, tipo: 'dinero' }, { v: p.realizado, tipo: 'dineroSigno' }]));
+    }
+    return hoja;
+}
+
+function hojaMesInversiones(mes, lista, realizadoPorOperacion) {
+    const hoja = new Hoja(nombreHojaMes(mes));
+    hoja.anchos = [12, 10, 28, 15, 10, 11, 12, 12, 13, 15, 3];
+    const aportado = lista.filter(i => !esVenta(i)).reduce((s, i) => s + calcularTotalInversion(i), 0);
+    const vendido = lista.filter(esVenta).reduce((s, i) => s + calcularTotalInversion(i), 0);
+    hoja.anadir([{ v: nombreHojaMes(mes), estilo: 'titulo' }]);
+    hoja.anadir([{ v: `${lista.length} ${lista.length === 1 ? 'operación' : 'operaciones'}`, estilo: 'nota' }]);
+    hoja.anadir([]);
+    cifrasClaveExcel(hoja, [
+        { etiqueta: 'Aportado', valor: { v: aportado, tipo: 'dinero' } },
+        { etiqueta: 'Vendido', valor: { v: vendido, tipo: 'dinero' } },
+        { etiqueta: 'Neto', valor: { v: aportado - vendido, tipo: 'dineroSigno' } }
+    ]);
+
+    // Aportado por activo este mes
+    const porActivo = {};
+    lista.filter(i => !esVenta(i)).forEach(i => { const n = i.nombre || 'Sin nombre'; porActivo[n] = (porActivo[n] || 0) + calcularTotalInversion(i); });
+    const activos = Object.entries(porActivo).sort((a, b) => b[1] - a[1]);
+    if (activos.length) {
+        hoja.anadir([]);
+        hoja.anadir([{ v: 'Aportado por activo', estilo: 'seccion' }]);
+        const cab = filaCabeceraExcel(hoja, ['Activo', '', 'Aportado', '% del mes'], 2);
+        activos.forEach(([nombre, valor]) => {
+            const f = hoja.filaActual + 1;
+            hoja.anadir([{ v: nombre }, null, { v: valor, tipo: 'dinero' }, { f: `C${f}/SUM($C$${cab + 1}:$C$${cab + activos.length})`, v: valor / aportado, tipo: 'porcentaje' }]);
+        });
+        if (activos.length > 1) {
+            hoja.graficos.push({
+                tipo: 'anillo', titulo: 'Aportado por activo', ancla: { col: 11, fila: 3, ancho: 7, alto: 15 },
+                categorias: { rango: `A${cab + 1}:A${hoja.filaActual}`, valores: activos.map(a => a[0]) },
+                series: [{ nombre: 'Aportado', rango: `C${cab + 1}:C${hoja.filaActual}`, valores: activos.map(a => a[1]), colores: activos.map((_, i) => colorIndice(i)) }]
+            });
+        }
+    }
+    hoja.anadir([]);
+    hoja.anadir([{ v: 'Operaciones', estilo: 'seccion' }]);
+    listaOperaciones(hoja, lista, realizadoPorOperacion);
+    return hoja;
+}
+
+export function generarExcelInversiones() {
+    if (inversiones.length === 0) return null;
+    const realizadoPorOperacion = {};
+    const posiciones = calcularPosiciones(inversiones, realizadoPorOperacion);
+
+    const total = hojaTotalInversiones(posiciones, realizadoPorOperacion);
+    const operaciones = new Hoja('Operaciones');
+    operaciones.anchos = [12, 10, 30, 15, 10, 11, 12, 12, 13, 15];
+    operaciones.congelarFilas = 1;
+    listaOperaciones(operaciones, inversiones, realizadoPorOperacion);
+
+    const porMes = agruparPorMes(inversiones).filter(g => g.mes !== 'sin-fecha').map(g => hojaMesInversiones(g.mes, g.elementos, realizadoPorOperacion));
+    return crearLibroExcel([total, operaciones, ...porMes]);
 }
 
 export function iniciarInversiones(funcionesAyuda) {

@@ -2,7 +2,7 @@
 // Cada elemento: { nombre, total, porcentaje, color } — el color lo asigna quien llama
 // según la entidad (no según su posición), para que no cambie al variar los importes.
 
-import { formatoEuros as euros, formatoPorcentaje } from './utils.js?v=20';
+import { formatoEuros as euros, formatoPorcentaje } from './utils.js?v=23';
 
 export const MAXIMO_SERIES = 7; // a partir de aquí se agrupan en "Otros"
 
