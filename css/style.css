@@ -1597,3 +1597,27 @@ input:focus, select:focus {
 .valor-vista-previa > b { color: var(--color-rent); }
 .valor-vista-previa span b { color: var(--texto-principal); }
 #valor-modo { margin-bottom: 14px; }
+
+/* Fila de activo: el nombre ocupa su propia línea, sin partirse */
+.activo-fila { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; }
+.activo-cabecera {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+.activo-cabecera .activo-nombre {
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    overflow-wrap: normal;
+}
+.activo-cabecera .btn-editar { flex-shrink: 0; }
+.activo-cabecera .btn-desplegar-cartera { flex-shrink: 0; }
+.activo-info { align-self: center; }
+.activo-hijo .activo-cabecera .activo-nombre { font-size: 13px; font-weight: 500; }
+.activo-hijo .activo-info:empty { display: none; }

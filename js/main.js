@@ -1,19 +1,20 @@
 import { 
     obtenerFechaHoy, obtenerMesActual, cargarGastosDesdeMemoria, guardarGastosEnMemoria, 
     filtrarMovimientosPorMes, calcularGastos, calcularIngresosNomina, calcularGastoHogar, 
-    calcularDesglosePersonal, calcularDesgloseHogar, descargarArchivo
-} from './utils.js?v=17';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, bytesABase64, MIME_EXCEL } from './excel.js?v=17';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=17';
+    calcularDesglosePersonal, calcularDesgloseHogar, descargarArchivo,
+    formatoNumero, formatoEuros, escaparHTML
+} from './utils.js?v=19';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, bytesABase64, MIME_EXCEL } from './excel.js?v=19';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=19';
 import { 
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, 
     reemplazarInversiones, generarExcelInversiones 
-} from './inversiones.js?v=17';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=17';
-import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=17';
-import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=17';
-import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=17';
-import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=17';
+} from './inversiones.js?v=19';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=19';
+import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=19';
+import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=19';
+import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=19';
+import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=19';
 
 const formulario = document.getElementById('formulario');
 const listaGastosTabla = document.getElementById('lista-gastos');
@@ -303,7 +304,7 @@ function abrirModalDetalle(tipo) {
 
     resumenContenedor.innerHTML = '';
     for (const [cat, monto] of Object.entries(desglose)) {
-        resumenContenedor.innerHTML += `<span class="resumen-badge">${cat}: ${Math.abs(monto).toFixed(2)} €</span>`;
+        resumenContenedor.innerHTML += `<span class="resumen-badge">${escaparHTML(cat)}: ${formatoEuros(Math.abs(monto))}</span>`;
     }
 
     listaDetalle.innerHTML = '';
@@ -317,8 +318,8 @@ function abrirModalDetalle(tipo) {
         listaDetalle.innerHTML += `
             <tr>
                 <td>${fechaEspanol}</td>
-                <td><span class="pildora">${mov.categoria || 'Otros'}</span> <br> <small>${mov.concepto || 'Sin concepto'}</small></td>
-                <td class="${claseColor}">${signo} ${parseFloat(mov.cantidad || 0).toFixed(2)} €</td>
+                <td><span class="pildora">${escaparHTML(mov.categoria || 'Otros')}</span> <br> <small>${escaparHTML(mov.concepto || 'Sin concepto')}</small></td>
+                <td class="${claseColor}">${signo} ${formatoEuros(parseFloat(mov.cantidad || 0))}</td>
                 <td>
                     <div class="acciones-fila">
                         <button class="btn-editar btn-editar-detalle" data-indice="${indiceReal}" title="Editar"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
@@ -373,9 +374,9 @@ function renderizarMovimientos() {
         const fila = document.createElement('tr');
         fila.innerHTML = `
             <td>${fechaSinAnio}</td>
-            <td>${mov.concepto || 'Sin concepto'}<br><span class="pildora categoria-movil">${mov.categoria || 'Otros'}</span></td>
-            <td><span class="pildora">${mov.categoria || 'Otros'}</span></td>
-            <td class="${claseColor}">${signo} ${parseFloat(mov.cantidad || 0).toFixed(2)} €</td>
+            <td>${escaparHTML(mov.concepto || 'Sin concepto')}<br><span class="pildora categoria-movil">${escaparHTML(mov.categoria || 'Otros')}</span></td>
+            <td><span class="pildora">${escaparHTML(mov.categoria || 'Otros')}</span></td>
+            <td class="${claseColor}">${signo} ${formatoEuros(parseFloat(mov.cantidad || 0))}</td>
             <td>
                 <div class="acciones-fila">
                     <button class="btn-editar btn-editar-main" data-indice="${indiceReal}" title="Editar"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
@@ -399,9 +400,9 @@ function renderizarMovimientos() {
         btn.addEventListener('click', function() { activarEdicionGlobal(this.getAttribute('data-indice')); });
     });
 
-    displayGasto.textContent = calcularGastos(movimientos, mesSeleccionado).toFixed(2);
-    displayIngreso.textContent = calcularIngresosNomina(movimientos, mesSeleccionado).toFixed(2);
-    displayHogar.textContent = calcularGastoHogar(movimientos, mesSeleccionado).toFixed(2);
+    displayGasto.textContent = formatoNumero(calcularGastos(movimientos, mesSeleccionado));
+    displayIngreso.textContent = formatoNumero(calcularIngresosNomina(movimientos, mesSeleccionado));
+    displayHogar.textContent = formatoNumero(calcularGastoHogar(movimientos, mesSeleccionado));
 }
 
 inputSelectorMes.addEventListener('change', renderizarMovimientos);

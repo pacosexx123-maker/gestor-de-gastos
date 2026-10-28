@@ -2,10 +2,12 @@
 // Cada elemento: { nombre, total, porcentaje, color } — el color lo asigna quien llama
 // según la entidad (no según su posición), para que no cambie al variar los importes.
 
+import { formatoEuros as euros, formatoPorcentaje } from './utils.js?v=19';
+
 export const MAXIMO_SERIES = 7; // a partir de aquí se agrupan en "Otros"
 
 function formatoEuros(numero) {
-    return `${numero.toFixed(2)} €`;
+    return euros(numero);
 }
 
 // Más de MAXIMO_SERIES elementos: los más pequeños se agrupan en "Otros"
@@ -27,7 +29,7 @@ function leyenda(elementos, escaparHTML) {
             <span class="leyenda-muestra" style="background: ${e.color}"></span>
             <span class="leyenda-nombre">${escaparHTML(e.nombre)}</span>
             <span class="leyenda-valor">${formatoEuros(e.total)}</span>
-            <span class="leyenda-porcentaje">${e.porcentaje.toFixed(1)}%</span>
+            <span class="leyenda-porcentaje">${formatoPorcentaje(e.porcentaje)}</span>
         </li>`).join('')}</ul>`;
 }
 
@@ -75,7 +77,7 @@ export function dibujarBarras(elementos, total, escaparHTML) {
     const maximo = Math.max(...elementos.map(e => e.total), 0);
     const columnas = elementos.map((e, i) => `
         <div class="barra-columna" data-i="${i}">
-            <span class="barra-porcentaje">${e.porcentaje.toFixed(0)}%</span>
+            <span class="barra-porcentaje">${formatoPorcentaje(e.porcentaje, 0)}</span>
             <span class="barra-relleno" style="height: ${maximo > 0 ? Math.max(2, (e.total / maximo) * 100) : 0}%; background: ${e.color}"></span>
         </div>`).join('');
 
@@ -112,7 +114,7 @@ export function conectarInteraccion(contenedor, elementos) {
             const e = elementos[indice];
             etiqueta.textContent = e.nombre;
             valor.textContent = formatoEuros(e.total);
-            detalle.textContent = `${e.porcentaje.toFixed(1)}% del total`;
+            detalle.textContent = `${formatoPorcentaje(e.porcentaje)} del total`;
         }
     };
 

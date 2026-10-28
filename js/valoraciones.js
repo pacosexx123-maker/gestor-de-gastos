@@ -8,6 +8,8 @@
 //   'rentabilidad' -> % de rentabilidad (valor = invertido × (1 + %/100)); se guarda el %,
 //                     así las aportaciones nuevas no aparecen como pérdida
 
+import { formatoNumero, formatoEuros, formatoDecimalVariable } from './utils.js?v=19';
+
 const modalValor = document.getElementById('modal-valor');
 const tituloValor = document.getElementById('valor-titulo');
 const resumenValor = document.getElementById('valor-resumen');
@@ -75,8 +77,8 @@ export function rentabilidad(coste, valor) {
 
 export function formatoRentabilidad(r, conEuros = false) {
     const signo = r.ganancia > 0.005 ? '+' : r.ganancia < -0.005 ? '−' : '';
-    const porcentaje = `${signo}${Math.abs(r.porcentaje).toFixed(2)}%`;
-    return conEuros ? `${signo}${Math.abs(r.ganancia).toFixed(2)} € · ${porcentaje}` : porcentaje;
+    const porcentaje = `${signo}${formatoNumero(Math.abs(r.porcentaje))}%`;
+    return conEuros ? `${signo}${formatoEuros(Math.abs(r.ganancia))} · ${porcentaje}` : porcentaje;
 }
 
 export function claseRentabilidad(r) {
@@ -123,7 +125,7 @@ function actualizarVistaPrevia() {
         return;
     }
     vistaPrevia.className = `valor-vista-previa rentabilidad-${claseRentabilidad(r)}`;
-    vistaPrevia.innerHTML = `<span>Valor actual <b>${r.valor.toFixed(2)} €</b></span><b>${formatoRentabilidad(r, true)}</b>`;
+    vistaPrevia.innerHTML = `<span>Valor actual <b>${formatoEuros(r.valor)}</b></span><b>${formatoRentabilidad(r, true)}</b>`;
 }
 
 // activo: { clave, nombre, coste, participaciones, esCartera }
@@ -133,8 +135,8 @@ export function abrirValorActual(activo) {
     const actual = valoraciones[activo.clave];
     const puedePrecio = activo.participaciones > 0 && !activo.esCartera;
 
-    resumenValor.textContent = `Invertido: ${activo.coste.toFixed(2)} €` +
-        (puedePrecio ? ` · ${parseFloat(activo.participaciones.toFixed(6))} títulos` : '') +
+    resumenValor.textContent = `Invertido: ${formatoEuros(activo.coste)}` +
+        (puedePrecio ? ` · ${formatoDecimalVariable(activo.participaciones, 6)} títulos` : '') +
         (actual ? ` · actualizado el ${ayudas.formatoFechaES(actual.fecha.substring(0, 10))}` : '');
 
     // Sin títulos (cartera o inversión añadida solo con importe) no se puede indicar el precio por título

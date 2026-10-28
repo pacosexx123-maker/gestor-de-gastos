@@ -2,10 +2,11 @@
 // Columnas reconocidas: Fecha de la orden, ISIN, Importe, Nº de participaciones, Estado
 // (y opcionalmente Nombre/Fondo y Precio/Valor liquidativo).
 
-import { leerPrimeraHojaExcel, excelAFecha } from './excel.js?v=17';
+import { leerPrimeraHojaExcel, excelAFecha } from './excel.js?v=19';
+import { formatoEuros } from './utils.js?v=19';
 import {
     obtenerInversiones, anadirInversiones, buscarActivo, normalizarIsin, escaparHTML, formatoDecimal
-} from './inversiones.js?v=17';
+} from './inversiones.js?v=19';
 
 const modalImportar = document.getElementById('modal-importar-ordenes');
 const listaOrdenes = document.getElementById('lista-ordenes-importar');
@@ -173,7 +174,7 @@ function renderizarVistaPrevia() {
                     ${orden.conocido
                         ? `<span class="orden-nombre-conocido">${escaparHTML(orden.nombre)}</span>`
                         : `<input type="text" class="orden-nombre" data-isin="${escaparHTML(orden.isin)}" value="${escaparHTML(orden.nombre)}" placeholder="Nombre del fondo (nuevo ISIN)">`}
-                    <small>${formatoDecimal(orden.participaciones, 6)} part. × ${formatoDecimal(orden.precio, 4)} € = <b>${total.toFixed(2)} €</b></small>
+                    <small>${formatoDecimal(orden.participaciones, 6)} part. × ${formatoDecimal(orden.precio, 4)} € = <b>${formatoEuros(total)}</b></small>
                 </div>
             </div>`;
     }).join('');

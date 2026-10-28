@@ -139,3 +139,36 @@ export function descargarArchivo(blob, nombreArchivo) {
     enlace.click();
     document.body.removeChild(enlace);
 }
+
+
+// --- FORMATO (español: 1.234,56) Y TEXTO SEGURO ---
+
+// Número con punto de miles y coma decimal. Se hace a mano porque Intl en español
+// no agrupa los números de 4 cifras (1234 en lugar de 1.234).
+export function formatoNumero(numero, decimales = 2) {
+    const valor = Number(numero) || 0;
+    const [entero, decimal] = Math.abs(valor).toFixed(decimales).split('.');
+    const conMiles = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    const negativo = valor < 0 && Number(Math.abs(valor).toFixed(decimales)) !== 0;
+    return `${negativo ? '-' : ''}${conMiles}${decimal ? `,${decimal}` : ''}`;
+}
+
+export function formatoEuros(numero) {
+    return `${formatoNumero(numero, 2)} €`;
+}
+
+export function formatoPorcentaje(numero, decimales = 1) {
+    return `${formatoNumero(numero, decimales)}%`;
+}
+
+// Participaciones y precios: hasta maxDecimales, sin ceros sobrantes (1,224 · 24,5098)
+export function formatoDecimalVariable(numero, maxDecimales) {
+    const redondeado = parseFloat((Number(numero) || 0).toFixed(maxDecimales));
+    const decimales = (String(redondeado).split('.')[1] || '').length;
+    return formatoNumero(redondeado, decimales);
+}
+
+// Evita que un texto guardado (p. ej. de un archivo importado) se interprete como código
+export function escaparHTML(texto) {
+    return String(texto).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}

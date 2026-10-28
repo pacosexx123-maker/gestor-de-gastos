@@ -3,7 +3,8 @@
 import {
     abrirModalCopia, hayContrasenaGuardada, guardarContrasenaCopia,
     obtenerDiasRecordatorio, fijarDiasRecordatorio, describirUltimaCopia
-} from './copia-seguridad.js?v=17';
+} from './copia-seguridad.js?v=19';
+import { formatoNumero } from './utils.js?v=19';
 
 const TEMAS = ['sistema', 'claro', 'oscuro'];
 const CLAVES_DATOS = ['gastos', 'inversiones', 'carteras', 'valoraciones', 'exportaciones', 'ultimaCopia', 'recordatorioPospuesto',
@@ -50,7 +51,7 @@ function marcarOpcion(grupo, valor) {
 }
 
 function formatoTamano(bytes) {
-    return bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(2)} MB`;
+    return bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${formatoNumero(bytes / 1024, 1)} KB` : `${formatoNumero(bytes / 1048576, 2)} MB`;
 }
 
 export function renderizarAjustes() {
@@ -84,6 +85,27 @@ export function renderizarAjustes() {
         contar(exportaciones.length, 'archivo', 'archivos')
     ].join(' · ');
     document.getElementById('ajuste-espacio').textContent = `Ocupan ${formatoTamano(bytes)} en este dispositivo`;
+    comprobarProteccion();
+}
+
+// ¿El navegador garantiza que no borrará los datos aunque falte espacio o pase tiempo sin abrir la app?
+async function comprobarProteccion() {
+    const titulo = document.getElementById('ajuste-proteccion');
+    const detalle = document.getElementById('ajuste-proteccion-detalle');
+    let protegido = false;
+    try {
+        if (navigator.storage && navigator.storage.persisted) {
+            protegido = await navigator.storage.persisted();
+            if (!protegido && navigator.storage.persist) protegido = await navigator.storage.persist();
+        }
+    } catch (error) { /* navegador sin esta opción */ }
+    const instalada = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    titulo.textContent = protegido ? 'Datos protegidos frente al borrado' : 'Protección de los datos';
+    detalle.textContent = protegido
+        ? 'El navegador no borrará tus datos automáticamente.'
+        : instalada
+            ? 'Al estar instalada en la pantalla de inicio, el riesgo de borrado es bajo. Haz copias de seguridad de vez en cuando.'
+            : 'Instala la app en la pantalla de inicio (Compartir → Añadir a pantalla de inicio) para que el navegador no borre tus datos, y haz copias de seguridad.';
 }
 
 // --- ACCIONES ---

@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=17">
+    <link rel="stylesheet" href="css/style.css?v=19">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -54,7 +54,7 @@
                     </span>
                     <h3>Ingresos</h3>
                 </div>
-                <p class="total-importe"><span id="ingresos-totales">0.00</span> €</p>
+                <p class="total-importe"><span id="ingresos-totales">0,00</span> €</p>
                 <span class="total-pie">Nómina del mes</span>
             </div>
             <div class="tarjeta-total bg-personal clicable" id="btn-ver-personal" title="Ver desglose personal">
@@ -64,7 +64,7 @@
                     </span>
                     <h3>Gasto personal</h3>
                 </div>
-                <p class="total-importe"><span id="gasto-total">0.00</span> €</p>
+                <p class="total-importe"><span id="gasto-total">0,00</span> €</p>
                 <span class="total-pie">Ver desglose
                     <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
                 </span>
@@ -76,7 +76,7 @@
                     </span>
                     <h3>Gasto hogar</h3>
                 </div>
-                <p class="total-importe"><span id="gasto-hogar">0.00</span> €</p>
+                <p class="total-importe"><span id="gasto-hogar">0,00</span> €</p>
                 <span class="total-pie">Acumulado · Ver desglose
                     <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
                 </span>
@@ -134,9 +134,9 @@
                     </span>
                     <h3>Total invertido</h3>
                 </div>
-                <p class="total-importe"><span id="inv-total">0.00</span> €</p>
+                <p class="total-importe"><span id="inv-total">0,00</span> €</p>
                 <div id="inv-valor-actual" class="linea-valor-actual oculto">
-                    <span>Valor actual <b id="inv-valor-total">0.00 €</b></span>
+                    <span>Valor actual <b id="inv-valor-total">0,00 €</b></span>
                     <span id="inv-rentabilidad-total" class="etiqueta-rentabilidad"></span>
                 </div>
                 <span class="total-pie" id="inv-num-operaciones">0 aportaciones</span>
@@ -367,6 +367,12 @@
             </div>
             <div class="ajuste-fila">
                 <div class="ajuste-texto">
+                    <b id="ajuste-proteccion">Protección de los datos</b>
+                    <small id="ajuste-proteccion-detalle">Comprobando...</small>
+                </div>
+            </div>
+            <div class="ajuste-fila">
+                <div class="ajuste-texto">
                     <b>Borrar todos los datos</b>
                     <small>Elimina gastos, inversiones, carteras y archivos de este dispositivo. No se puede deshacer.</small>
                 </div>
@@ -572,9 +578,9 @@
                 <div class="resumen-formulario">
                     <div>
                         <span>Total pagado</span>
-                        <small id="inv-desglose-formulario">0.00 € en títulos + 0.00 € de comisión</small>
+                        <small id="inv-desglose-formulario">0,00 € en títulos + 0,00 € de comisión</small>
                     </div>
-                    <b><span id="inv-total-formulario">0.00</span> €</b>
+                    <b><span id="inv-total-formulario">0,00</span> €</b>
                 </div>
                 <p id="inv-error-comision" class="texto-error oculto">El importe final no puede ser menor que títulos × precio.</p>
                 <button type="submit" id="btn-guardar-inversion" class="btn-guardar">Guardar Inversión</button>
@@ -734,6 +740,24 @@
     <!-- Notificación -->
     <div id="toast-notificacion" class="toast">Mensaje</div>
 
+    <!-- Funcionar sin conexión y pedir al navegador que no borre los datos -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('sw.js').catch(function () {});
+                // En la primera visita los archivos ya se cargaron antes que el service worker: se le pasan para guardarlos
+                navigator.serviceWorker.ready.then(function (registro) {
+                    var archivos = [location.href].concat(performance.getEntriesByType('resource').map(function (r) { return r.name; }))
+                        .filter(function (url) { return url.indexOf(location.origin) === 0; });
+                    if (registro.active) registro.active.postMessage({ tipo: 'guardar', archivos: archivos });
+                });
+            });
+        }
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().catch(function () {});
+        }
+    </script>
+
     <!-- Si la app no arranca, se muestra el motivo en lugar de "Cargando mes..." -->
     <script>
         (function () {
@@ -756,6 +780,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=17"></script>
+    <script type="module" src="js/main.js?v=19"></script>
 </body>
 </html>

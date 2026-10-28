@@ -1,14 +1,15 @@
 import {
     obtenerFechaHoy, cargarInversionesDesdeMemoria, guardarInversionesEnMemoria,
-    calcularTotalInversion, calcularResumenPorActivo, claveActivo, tieneDetalleTitulos
-} from './utils.js?v=17';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha } from './excel.js?v=17';
-import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=17';
-import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros } from './graficos.js?v=17';
+    calcularTotalInversion, calcularResumenPorActivo, claveActivo, tieneDetalleTitulos,
+    formatoNumero, formatoEuros, formatoPorcentaje, formatoDecimalVariable, escaparHTML as escaparTexto
+} from './utils.js?v=19';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha } from './excel.js?v=19';
+import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=19';
+import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros } from './graficos.js?v=19';
 import {
     iniciarValoraciones, abrirValorActual, valorActual, precioActual,
     rentabilidad, formatoRentabilidad, claseRentabilidad
-} from './valoraciones.js?v=17';
+} from './valoraciones.js?v=19';
 
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICONO_DESPLEGAR = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -46,12 +47,12 @@ let ultimoEditado = 'comision'; // 'comision' o 'final': el que escribió el usu
 let ayudas = {}; // abrirModal, cerrarModal, mostrarToast, formatoFechaES (vienen de main.js)
 
 export function escaparHTML(texto) {
-    return String(texto).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    return escaparTexto(texto);
 }
 
 // Participaciones y precios pueden tener muchos decimales (p. ej. valor liquidativo de un fondo)
 export function formatoDecimal(numero, maxDecimales) {
-    return parseFloat(parseFloat(numero || 0).toFixed(maxDecimales)).toString();
+    return formatoDecimalVariable(numero, maxDecimales);
 }
 
 export function normalizarIsin(isin) {
@@ -147,7 +148,7 @@ function recalcularImportes(origen) {
     if (modoImporte === 'total') {
         const total = parseFloat(inputImporteSolo.value) || 0;
         errorComision.classList.add('oculto');
-        displayTotalFormulario.textContent = total.toFixed(2);
+        displayTotalFormulario.textContent = formatoNumero(total);
         displayDesglose.textContent = 'Sin detalle de títulos ni precio';
         return { valor: 0, comision: 0, comisionNegativa: false };
     }
@@ -168,8 +169,8 @@ function recalcularImportes(origen) {
 
     const comisionNegativa = hayValor && comision < -0.005;
     errorComision.classList.toggle('oculto', !comisionNegativa);
-    displayTotalFormulario.textContent = (valor + comision).toFixed(2);
-    displayDesglose.textContent = `${valor.toFixed(2)} € en títulos + ${redondear(comision).toFixed(2)} € de comisión`;
+    displayTotalFormulario.textContent = formatoNumero(valor + comision);
+    displayDesglose.textContent = `${formatoEuros(valor)} en títulos + ${formatoEuros(redondear(comision))} de comisión`;
     return { valor, comision: redondear(comision), comisionNegativa };
 }
 
@@ -216,7 +217,7 @@ export function renderizarInversiones() {
     const grupos = construirGruposDistribucion(resumen, totalInvertido);
 
     // Tarjetas de totales: lo invertido y lo que vale ahora (los activos sin valorar cuentan por lo invertido)
-    document.getElementById('inv-total').textContent = totalInvertido.toFixed(2);
+    document.getElementById('inv-total').textContent = formatoNumero(totalInvertido);
     let valorTotal = 0, sinValorar = 0;
     grupos.forEach(g => {
         if (g.valor === null) { valorTotal += g.total; sinValorar++; } else valorTotal += g.valor;
@@ -225,7 +226,7 @@ export function renderizarInversiones() {
     const lineaValor = document.getElementById('inv-valor-actual');
     lineaValor.classList.toggle('oculto', !rTotal);
     if (rTotal) {
-        document.getElementById('inv-valor-total').textContent = `${valorTotal.toFixed(2)} €`;
+        document.getElementById('inv-valor-total').textContent = formatoEuros(valorTotal);
         const etiqueta = document.getElementById('inv-rentabilidad-total');
         etiqueta.textContent = formatoRentabilidad(rTotal, true);
         etiqueta.className = `etiqueta-rentabilidad rentabilidad-${claseRentabilidad(rTotal)}`;
@@ -316,15 +317,17 @@ function filaActivo(activo, porcentaje, color, esHijo = false) {
     const sinNombre = !activo.nombre || activo.nombre === activo.isin;
     return `
         <div class="activo-fila ${esHijo ? 'activo-hijo' : ''}">
-            <div class="activo-info">
+            <div class="activo-cabecera">
                 <b class="activo-nombre ${sinNombre ? 'sin-nombre' : ''}">${sinNombre ? 'Sin nombre' : escaparHTML(activo.nombre)}</b>
                 <button class="btn-editar btn-renombrar-activo" data-clave="${escaparHTML(activo.clave)}" title="Cambiar nombre">${ICONO_EDITAR}</button>
+            </div>
+            <div class="activo-info">
                 <span class="pildora">${escaparHTML(activo.tipo)}</span>
                 ${activo.isin ? `<small class="texto-isin">${escaparHTML(activo.isin)}</small>` : ''}
             </div>
             <div class="activo-datos">
-                <span class="activo-total">${activo.total.toFixed(2)} € ${botonRentabilidad(activo.clave, activo.total, activo.valor)}</span>
-                <small>${r ? `Vale ${r.valor.toFixed(2)} € · ` : ''}${activo.participaciones > 0 ? `${formatoDecimal(activo.participaciones, 6)} part. · ` : ''}${porcentaje.toFixed(1)}%</small>
+                <span class="activo-total">${formatoEuros(activo.total)} ${botonRentabilidad(activo.clave, activo.total, activo.valor)}</span>
+                <small>${r ? `Vale ${formatoEuros(r.valor)} · ` : ''}${activo.participaciones > 0 ? `${formatoDecimal(activo.participaciones, 6)} part. · ` : ''}${formatoPorcentaje(porcentaje)}</small>
             </div>
             <div class="activo-barra"><span style="width: ${porcentaje}%; background: ${color}"></span></div>
         </div>`;
@@ -338,16 +341,18 @@ function filaCartera(grupo) {
         .map(h => filaActivo(h, grupo.total > 0 ? (h.total / grupo.total) * 100 : 0, grupo.color, true)).join('');
     return `
         <div class="activo-fila fila-cartera ${abierta ? 'abierta' : ''}" data-cartera="${grupo.id}">
-            <div class="activo-info">
+            <div class="activo-cabecera">
                 <button class="btn-desplegar-cartera" data-cartera="${grupo.id}" aria-expanded="${abierta}" title="Ver los activos de la cartera">${ICONO_DESPLEGAR}</button>
                 <b class="activo-nombre">${escaparHTML(grupo.nombre)}</b>
                 <button class="btn-editar btn-editar-cartera-dist" data-cartera="${grupo.id}" title="Editar cartera">${ICONO_EDITAR}</button>
+            </div>
+            <div class="activo-info">
                 <span class="pildora pildora-cartera">Cartera</span>
                 <small class="texto-isin">${grupo.hijos.length} ${grupo.hijos.length === 1 ? 'activo' : 'activos'}</small>
             </div>
             <div class="activo-datos">
-                <span class="activo-total">${grupo.total.toFixed(2)} € ${botonRentabilidad(grupo.clave, grupo.total, grupo.valor)}</span>
-                <small>${r ? `Vale ${r.valor.toFixed(2)} € · ` : ''}${grupo.porcentaje.toFixed(1)}%</small>
+                <span class="activo-total">${formatoEuros(grupo.total)} ${botonRentabilidad(grupo.clave, grupo.total, grupo.valor)}</span>
+                <small>${r ? `Vale ${formatoEuros(r.valor)} · ` : ''}${formatoPorcentaje(grupo.porcentaje)}</small>
             </div>
             <div class="activo-barra"><span style="width: ${grupo.porcentaje}%; background: ${grupo.color}"></span></div>
             <div class="cartera-hijos ${abierta ? '' : 'oculto'}">${hijos}</div>
@@ -446,12 +451,12 @@ function renderizarOperaciones() {
                 ${escaparHTML(inv.nombre || 'Sin nombre')}<br>
                 <span class="pildora">${escaparHTML(inv.tipo || 'Otro')}</span>
                 ${inv.isin ? `<small class="texto-isin">${escaparHTML(inv.isin)}</small>` : ''}
-                <small class="detalle-movil">${conTitulos ? `${cantidad} × ${precio}${comision > 0 ? ` + ${comision.toFixed(2)} € com.` : ''}` : 'Solo importe'}</small>
+                <small class="detalle-movil">${conTitulos ? `${cantidad} × ${precio}${comision > 0 ? ` + ${formatoEuros(comision)} com.` : ''}` : 'Solo importe'}</small>
             </td>
             <td class="col-cantidad">${cantidad}</td>
             <td class="col-cantidad">${precio}</td>
-            <td class="col-cantidad">${comision > 0 ? `${comision.toFixed(2)} €` : '—'}</td>
-            <td class="col-cantidad monto-inversion">${calcularTotalInversion(inv).toFixed(2)} €${rentabilidadOperacion(inv)}</td>
+            <td class="col-cantidad">${comision > 0 ? formatoEuros(comision) : '—'}</td>
+            <td class="col-cantidad monto-inversion">${formatoEuros(calcularTotalInversion(inv))}${rentabilidadOperacion(inv)}</td>
             <td>
                 <div class="acciones-fila">
                     <button class="btn-editar btn-editar-inversion" data-indice="${indice}" title="Editar">${ICONO_EDITAR}</button>
