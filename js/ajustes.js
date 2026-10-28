@@ -3,12 +3,15 @@
 import {
     abrirModalCopia, hayContrasenaGuardada, guardarContrasenaCopia,
     obtenerDiasRecordatorio, fijarDiasRecordatorio, describirUltimaCopia
-} from './copia-seguridad.js?v=19';
-import { formatoNumero } from './utils.js?v=19';
+} from './copia-seguridad.js?v=20';
+import { formatoNumero } from './utils.js?v=20';
+import { CLAVES_ALMACEN } from './datos.js?v=20';
+import { abrirConfiguracion } from './configuracion.js?v=20';
 
 const TEMAS = ['sistema', 'claro', 'oscuro'];
-const CLAVES_DATOS = ['gastos', 'inversiones', 'carteras', 'valoraciones', 'exportaciones', 'ultimaCopia', 'recordatorioPospuesto',
-    'contrasenaCopia', 'diasRecordatorio', 'seccionActiva', 'seccionInicio', 'modoDistribucion'];
+const CLAVES_DATOS = [...CLAVES_ALMACEN, 'inversiones', 'carteras', 'valoraciones', 'exportaciones', 'ultimaCopia', 'recordatorioPospuesto',
+    'contrasenaCopia', 'diasRecordatorio', 'seccionActiva', 'seccionInicio', 'modoDistribucion', 'modoAnalisisGastos',
+    'migracionApartados', 'bloqueo'];
 
 let ayudas = {}; // mostrarToast, obtenerDatos (vienen de main.js)
 
@@ -166,6 +169,7 @@ export function iniciarAjustes(funcionesAyuda) {
     });
     document.getElementById('btn-copia-ahora').addEventListener('click', () => abrirModalCopia());
     document.getElementById('btn-borrar-todo').addEventListener('click', borrarTodo);
+    document.getElementById('btn-abrir-config-gastos').addEventListener('click', abrirConfiguracion);
 
     renderizarAjustes();
 }

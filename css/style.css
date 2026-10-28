@@ -1621,3 +1621,230 @@ input:focus, select:focus {
 .activo-info { align-self: center; }
 .activo-hijo .activo-cabecera .activo-nombre { font-size: 13px; font-weight: 500; }
 .activo-hijo .activo-info:empty { display: none; }
+
+/* =========================================================
+   Gastos: comparación, apartados, presupuestos, filtros, notas
+   ========================================================= */
+.comparacion { font-size: 12px; font-weight: 600; color: var(--texto-terciario); font-variant-numeric: tabular-nums; margin-top: -6px; }
+.comparacion:empty { display: none; }
+.comparacion-mala { color: var(--gasto); }
+.comparacion-buena { color: var(--ingreso); }
+
+.btn-mini { height: 30px; padding: 0 10px; font-size: 13px; flex-shrink: 0; }
+.control-pequeno button { height: 28px; padding: 0 10px; font-size: 12px; }
+
+.lista-presupuestos { padding: 4px 0; }
+.presupuesto-fila { padding: 12px 20px; border-bottom: 1px solid var(--borde); }
+.presupuesto-fila:last-child { border-bottom: none; }
+.presupuesto-texto { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; font-size: 14px; }
+.presupuesto-texto span { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.presupuesto-texto small { font-weight: 400; color: var(--texto-terciario); }
+.presupuesto-barra { height: 8px; border-radius: 4px; background: var(--superficie-2); overflow: hidden; }
+.presupuesto-barra span { display: block; height: 100%; border-radius: 4px; background: var(--ingreso); transition: width 0.3s; }
+.presupuesto-cerca .presupuesto-barra span { background: var(--ultima); }
+.presupuesto-superado .presupuesto-barra span { background: var(--gasto); }
+.presupuesto-estado { display: block; margin-top: 4px; font-size: 12px; color: var(--texto-terciario); }
+.presupuesto-superado .presupuesto-estado { color: var(--gasto); font-weight: 600; }
+.lista-editar-presupuestos { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.presupuesto-edicion { display: grid; grid-template-columns: 1fr 140px; align-items: center; gap: 12px; }
+.presupuesto-edicion label { margin: 0; font-size: 14px; color: var(--texto-principal); }
+.presupuesto-edicion input { height: 40px; }
+
+.filtros-movimientos { flex-wrap: wrap; }
+.filtros-movimientos .filtro-busqueda { flex: 1 1 100%; }
+.filtros-movimientos select { flex: 1 1 160px; }
+.filtro-todos { margin: 0; font-size: 13px; white-space: nowrap; }
+
+.pildoras { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.pildoras-movil { display: none; }
+.pildora-apartado { background: var(--hogar-suave); color: var(--hogar); border-color: transparent; }
+.pildora-recurrente { display: inline-flex; align-items: center; gap: 4px; background: var(--activos-suave); color: var(--activos); border-color: transparent; }
+.pildora-recurrente svg { width: 11px; height: 11px; }
+.pildora-venta { background: var(--ingreso-suave); color: var(--ingreso); border-color: transparent; font-weight: 600; }
+.nota-movimiento { display: block; margin-top: 2px; font-size: 12px !important; font-style: italic; color: var(--texto-terciario) !important; }
+.monto-venta { color: var(--ingreso); }
+.tabla .acciones-tres { gap: 0; }
+.tabla-historial td:nth-child(5), .tabla-detalle td:nth-child(4), .tabla-inversiones td:nth-child(7) { width: 112px; }
+
+.etiqueta-con-enlace { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.enlace { border: none; background: none; padding: 0; color: var(--acento); font-size: 12px; font-weight: 500; cursor: pointer; }
+.opcional { font-style: normal; font-weight: 400; color: var(--texto-terciario); }
+textarea {
+    padding: 10px 12px;
+    border: 1px solid var(--borde-fuerte);
+    border-radius: var(--radio-sm);
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--texto-principal);
+    background: var(--superficie);
+    resize: vertical;
+    width: 100%;
+}
+textarea:focus { outline: none; border-color: var(--acento); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2); }
+.grupo-segmentado { margin-bottom: 16px; }
+
+/* Listas de configuración (apartados, categorías, recurrentes, cuentas) */
+.titulo-bloque { margin: 20px 0 6px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--texto-terciario); }
+.titulo-bloque:first-of-type { margin-top: 4px; }
+.lista-config { border: 1px solid var(--borde); border-radius: var(--radio-sm); margin-bottom: 10px; }
+.lista-config:empty { display: none; }
+.lista-config .estado-vacio { padding: 16px; }
+.lista-tarjeta { border: none; border-radius: 0; margin: 0; }
+.config-fila { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--borde); }
+.config-fila:last-child { border-bottom: none; }
+.lista-tarjeta .config-fila { padding: 12px 20px; }
+.config-texto { flex: 1; min-width: 0; }
+.config-texto b { display: block; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.config-texto small { display: block; font-size: 12px; color: var(--texto-terciario); }
+.config-fila.pausado { opacity: 0.55; }
+.importe-fila { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* =========================================================
+   Gráficos nuevos: evolución mensual y líneas
+   ========================================================= */
+.serie-ingresos { background: var(--serie-3); }
+.serie-gastos { background: var(--serie-2); }
+.serie-aportado { background: var(--texto-terciario); }
+.serie-valor { background: var(--serie-1); }
+.leyenda-horizontal { flex-direction: row; flex-wrap: wrap; gap: 4px 16px; margin-top: 12px; }
+.leyenda-horizontal li { display: flex; padding: 0; gap: 6px; }
+
+.evolucion-area { display: flex; align-items: flex-end; gap: 4px; height: 170px; border-bottom: 1px solid var(--borde-fuerte); }
+.evolucion-mes { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; cursor: pointer; transition: opacity 0.15s; }
+.evolucion-mes.atenuado { opacity: 0.3; }
+.evolucion-columnas { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 2px; }
+.evolucion-barra { width: 42%; max-width: 16px; border-radius: 3px 3px 0 0; }
+.evolucion-mes small { margin-top: 4px; margin-bottom: -20px; font-size: 10px; color: var(--texto-terciario); }
+.grafico-evolucion .leyenda-horizontal { margin-top: 28px; }
+
+.lineas-svg { width: 100%; height: 200px; display: block; overflow: visible; }
+.lineas-base { stroke: var(--borde-fuerte); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.linea-aportado { fill: none; stroke: var(--texto-terciario); stroke-width: 2; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
+.linea-valor { fill: none; stroke: var(--serie-1); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.punto-valor { fill: var(--serie-1); stroke: var(--superficie); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.lineas-ejes { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; color: var(--texto-terciario); }
+
+/* =========================================================
+   Resumen
+   ========================================================= */
+.contenedor-resumen { grid-template-columns: 1fr 1fr; }
+.importe-positiva { color: var(--ingreso); }
+.importe-negativa { color: var(--gasto); }
+.resumen-meses { padding: 8px 20px 14px; }
+.mes-ahorro { display: grid; grid-template-columns: 34px 1fr auto 40px; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; }
+.mes-ahorro-nombre { color: var(--texto-secundario); text-transform: capitalize; }
+.mes-ahorro-barra { height: 8px; border-radius: 4px; background: var(--superficie-2); overflow: hidden; }
+.mes-ahorro-barra span { display: block; height: 100%; border-radius: 4px; background: var(--color-rent); }
+.mes-ahorro-valor { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--color-rent); white-space: nowrap; }
+.mes-ahorro-tasa { text-align: right; color: var(--texto-terciario); font-variant-numeric: tabular-nums; }
+.lista-objetivos { padding: 4px 0; }
+.objetivo-fila { padding: 12px 20px; border-bottom: 1px solid var(--borde); }
+.objetivo-fila:last-child { border-bottom: none; }
+.objetivo-cabecera { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+.objetivo-cabecera b { font-size: 14px; }
+.objetivo-barra span { background: var(--inversion); }
+.objetivo-fila small { display: block; margin-top: 4px; font-size: 12px; color: var(--texto-terciario); font-variant-numeric: tabular-nums; }
+
+/* =========================================================
+   Seguridad: interruptor y pantalla de bloqueo
+   ========================================================= */
+.interruptor { position: relative; display: inline-block; width: 46px; height: 28px; flex-shrink: 0; margin: 0; cursor: pointer; }
+.interruptor input { position: absolute; opacity: 0; width: 0; height: 0; }
+.interruptor span { position: absolute; inset: 0; border-radius: 14px; background: var(--borde-fuerte); transition: background 0.2s; }
+.interruptor span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: var(--sombra-sm); transition: transform 0.2s; }
+.interruptor input:checked + span { background: var(--ingreso); }
+.interruptor input:checked + span::after { transform: translateX(18px); }
+
+html.bloqueada main, html.bloqueada .barra-navegacion, html.bloqueada .btn-flotante, html.bloqueada .menu-datos { visibility: hidden; }
+.pantalla-bloqueo {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
+    background: var(--fondo-app);
+}
+.bloqueo-contenido { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; max-width: 300px; }
+.bloqueo-logo { width: 56px; height: 56px; border-radius: 14px; }
+.bloqueo-contenido > b { font-size: 18px; font-weight: 600; }
+.bloqueo-puntos { display: flex; gap: 14px; min-height: 14px; }
+.bloqueo-puntos span { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--borde-fuerte); }
+.bloqueo-puntos span.lleno { background: var(--texto-principal); border-color: var(--texto-principal); }
+.bloqueo-error { margin: 0; min-height: 18px; font-size: 13px; color: var(--gasto); }
+.bloqueo-teclado { display: grid; grid-template-columns: repeat(3, 72px); gap: 14px; justify-content: center; }
+.bloqueo-teclado button {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 1px solid var(--borde);
+    background: var(--superficie);
+    color: var(--texto-principal);
+    font-size: 26px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s;
+}
+.bloqueo-teclado button:active { background: var(--superficie-2); }
+.bloqueo-teclado .tecla-secundaria { border-color: transparent; background: transparent; color: var(--texto-secundario); }
+.bloqueo-teclado .tecla-secundaria svg { width: 26px; height: 26px; }
+.bloqueo-teclado #bloqueo-biometria.oculto { display: inline-flex !important; visibility: hidden; }
+.bloqueo-entrar { max-width: 260px; }
+.temblar .bloqueo-puntos { animation: temblar 0.35s; }
+@keyframes temblar { 0%, 100% { transform: none; } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+/* =========================================================
+   Aviso con "Deshacer"
+   ========================================================= */
+.toast { display: flex; align-items: center; gap: 14px; white-space: normal; max-width: calc(100vw - 32px); }
+.toast-accion {
+    border: none;
+    background: transparent;
+    color: var(--serie-1);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 4px 2px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .toast-accion { color: #2a78d6; } }
+:root[data-theme="dark"] .toast-accion { color: #2a78d6; }
+
+/* =========================================================
+   Móvil
+   ========================================================= */
+@media (max-width: 560px) {
+    .tabla-historial .col-categoria, .tabla-historial td:nth-child(3) { display: none; }
+    .pildoras-movil { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .tabla-historial td:nth-child(5), .tabla-detalle td:nth-child(4), .tabla-inversiones td:nth-child(7) { width: 92px; padding-left: 0; padding-right: 6px; }
+    .tabla .acciones-tres button { width: 28px; height: 28px; }
+    .filtros-movimientos select { flex: 1 1 100%; }
+    .presupuesto-fila, .objetivo-fila, .resumen-meses, .lista-tarjeta .config-fila { padding-left: 16px; padding-right: 16px; }
+    .contenedor-resumen { grid-template-columns: 1fr; }
+    .presupuesto-edicion { grid-template-columns: 1fr 120px; }
+    .cabecera-tarjeta-titulo small { font-size: 12px; }
+}
+@media (max-width: 600px) {
+    .nav-item { width: 42px; height: 42px; }
+    .nav-item svg { width: 20px; height: 20px; }
+}
+@media (max-width: 370px) {
+    .nav-item { width: 38px; height: 38px; }
+}
+
+/* Pantallas medianas: barra inferior solo con iconos para que no choque con los botones de los lados */
+@media (min-width: 601px) and (max-width: 900px) {
+    .nav-item { width: 46px; padding: 0; justify-content: center; }
+    .nav-item span { display: none; }
+}
+
+/* Ordenador: botones laterales redondos (solo icono) para dejar sitio a la barra con 5 pestañas */
+@media (min-width: 601px) {
+    .btn-flotante, .btn-flotante.btn-datos { width: 52px; height: 52px; padding: 0; justify-content: center; border-radius: 50%; }
+    .btn-flotante span { display: none; }
+}
