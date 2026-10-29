@@ -2,11 +2,11 @@
 // Columnas reconocidas: Fecha de la orden, ISIN, Importe, Nº de participaciones, Estado
 // (y opcionalmente Nombre/Fondo y Precio/Valor liquidativo).
 
-import { leerPrimeraHojaExcel, excelAFecha } from './excel.js?v=23';
-import { formatoEuros, tieneDetalleTitulos, formatoFechaES, esVenta } from './utils.js?v=23';
+import { leerPrimeraHojaExcel, excelAFecha } from './excel.js?v=24';
+import { formatoEuros, tieneDetalleTitulos, formatoFechaES, esVenta } from './utils.js?v=24';
 import {
     obtenerInversiones, anadirInversiones, eliminarInversiones, buscarActivo, normalizarIsin, escaparHTML, formatoDecimal
-} from './inversiones.js?v=23';
+} from './inversiones.js?v=24';
 
 const modalImportar = document.getElementById('modal-importar-ordenes');
 const listaOrdenes = document.getElementById('lista-ordenes-importar');
@@ -51,7 +51,7 @@ function leerCSV(texto) {
     return filas;
 }
 
-function normalizarCabecera(texto) {
+export function normalizarCabecera(texto) {
     return String(texto).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 }
 
@@ -72,7 +72,7 @@ function detectarColumnas(cabecera) {
 }
 
 // "1,224" / "1.224,50" / "30 EUR" / 1.224 -> número
-function leerNumero(valor) {
+export function leerNumero(valor) {
     if (typeof valor === 'number') return valor;
     let texto = String(valor || '').replace(/[^\d,.\-]/g, '');
     if (!texto) return NaN;
@@ -89,7 +89,7 @@ function leerNumero(valor) {
 }
 
 // Número de Excel, "31/08/2026", "31-08-26", "2026-08-31" -> "AAAA-MM-DD"
-function leerFecha(valor) {
+export function leerFecha(valor) {
     if (typeof valor === 'number' && valor > 0) return excelAFecha(valor);
     const texto = String(valor || '').trim();
     let m = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
@@ -108,10 +108,20 @@ function estaFinalizada(estado) {
     return e.includes('finaliz') || e.includes('ejecutad') || e.includes('completad') || e.includes('liquidad');
 }
 
-async function leerOrdenes(archivo) {
+// Filas de un CSV o de la primera hoja de un Excel (.xlsx)
+export async function leerFilasArchivo(archivo) {
     const bytes = new Uint8Array(await archivo.arrayBuffer());
     const esExcel = bytes[0] === 0x50 && bytes[1] === 0x4B; // los .xlsx empiezan por "PK"
-    const filas = esExcel ? await leerPrimeraHojaExcel(bytes) : leerCSV(decodificarTexto(bytes));
+    return esExcel ? leerPrimeraHojaExcel(bytes) : leerCSV(decodificarTexto(bytes));
+}
+
+// ¿Es un archivo de órdenes del bróker? (tiene una columna ISIN)
+export function sonOrdenesDeBroker(filas) {
+    return filas.slice(0, 30).some(fila => fila.some(c => normalizarCabecera(c) === 'isin' || normalizarCabecera(c).includes(' isin')));
+}
+
+async function leerOrdenes(archivo) {
+    const filas = await leerFilasArchivo(archivo);
 
     const filaCabecera = filas.findIndex(fila => fila.some(c => normalizarCabecera(c).includes('isin')));
     if (filaCabecera < 0) throw new Error('No se ha encontrado la columna "ISIN" en el archivo.');

@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=23">
+    <link rel="stylesheet" href="css/style.css?v=24">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -57,7 +57,7 @@
             <div class="cabecera-tarjeta estatica">
                 <div class="cabecera-tarjeta-titulo">
                     <span class="icono-tarjeta"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
-                    <div><b>Últimos 6 meses</b><small>Ahorro (ingresos − gastos, incluidos los apartados) y tasa de ahorro</small></div>
+                    <div><b>Últimos 6 meses</b><small>Ahorro (ingresos − gasto personal) y tasa de ahorro</small></div>
                 </div>
             </div>
             <div id="resumen-meses" class="resumen-meses"></div>
@@ -426,6 +426,13 @@
                 </div>
                 <div id="lista-recurrentes" class="lista-config"></div>
             </div>
+            <div class="ajuste-fila ajuste-columna">
+                <div class="ajuste-texto">
+                    <b>Reglas de categorías aprendidas</b>
+                    <small>Se usan para autocompletar y al importar el extracto del banco. Borra las que no quieras.</small>
+                </div>
+                <div id="lista-reglas" class="lista-config lista-reglas"></div>
+            </div>
         </section>
 
         <!-- Seguridad -->
@@ -586,7 +593,7 @@
         </button>
         <button type="button" id="btn-importar-json" class="menu-opcion" role="menuitem">
             <span class="menu-icono"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
-            <span class="menu-texto"><b>Importar</b><small>Copia de seguridad u órdenes del bróker</small></span>
+            <span class="menu-texto"><b>Importar</b><small>Copia, extracto del banco u órdenes del bróker</small></span>
         </button>
     </div>
     <input type="file" id="input-archivo-json" class="input-archivo-oculto" accept=".json,.csv,.xlsx,.xls,.txt,application/json,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
@@ -625,7 +632,8 @@
                 </div>
                 <div class="grupo-input">
                     <label for="concepto">Concepto</label>
-                    <input type="text" id="concepto" placeholder="Ej. Compra supermercado" required>
+                    <input type="text" id="concepto" list="lista-conceptos" placeholder="Ej. Compra supermercado" autocomplete="off" required>
+                    <datalist id="lista-conceptos"></datalist>
                 </div>
                 <div class="dos-columnas">
                     <div class="grupo-input">
@@ -1044,6 +1052,25 @@
         </div>
     </div>
 
+    <!-- Modal vista previa del extracto del banco -->
+    <div id="modal-importar-banco" class="modal-overlay oculto">
+        <div class="modal-contenido modal-ancho">
+            <div class="cabecera-modal">
+                <div>
+                    <b>Importar extracto del banco</b>
+                    <small id="resumen-importacion-banco" class="subtitulo-modal"></small>
+                </div>
+                <button id="btn-cerrar-banco" class="btn-cerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+            <p class="texto-ayuda">Revisa la categoría y si va a tu gasto personal o a un apartado (como Hogar). Lo que cambies se aprenderá: la próxima vez esos comercios se categorizarán solos. Los que ya tenías apuntados vienen desmarcados.</p>
+            <div class="banco-acciones"><button type="button" id="btn-marcar-todos-banco" class="enlace">Marcar / desmarcar todos</button></div>
+            <div id="lista-movimientos-banco" class="lista-ordenes"></div>
+            <div class="pie-modal">
+                <button type="button" id="btn-confirmar-banco" class="btn-guardar">Importar movimientos</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Notificación -->
     <div id="toast-notificacion" class="toast" role="status" aria-live="polite"><span class="toast-texto">Mensaje</span><button type="button" class="toast-accion oculto">Deshacer</button></div>
 
@@ -1087,6 +1114,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=23"></script>
+    <script type="module" src="js/main.js?v=24"></script>
 </body>
 </html>

@@ -2,15 +2,16 @@
 // (gastos que van aparte, como "Hogar"), gráficos, historial con filtros,
 // formulario (con notas y repetición mensual), duplicar y deshacer.
 
-import { leerDato, guardarDato } from './datos.js?v=23';
+import { leerDato, guardarDato } from './datos.js?v=24';
 import {
     obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesCorto, nombreMesLargo, formatoFechaES,
     formatoNumero, formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=23';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=23';
-import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=23';
-import { crearRecurrente } from './recurrentes.js?v=23';
-import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=23';
+} from './utils.js?v=24';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=24';
+import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=24';
+import { crearRecurrente } from './recurrentes.js?v=24';
+import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=24';
+import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=24';
 
 const ICONO = {
     editar: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
@@ -44,6 +45,8 @@ const checkRecurrente = $('mov-recurrente');
 let movimientos = leerDato('movimientos');
 let presupuestos = leerDato('presupuestos');
 let indiceEditando = null;
+let categoriaTocada = false; // si el usuario elige la categoría o el apartado, el autocompletado ya no los cambia
+let apartadoTocado = false;
 let detalleAbierto = null; // { tipo: 'personal' | 'ingresos' | 'apartado', id }
 let modoAnalisis = localStorage.getItem('modoAnalisisGastos') === 'meses' ? 'meses' : 'categorias';
 let ayudas = {}; // abrirModal, cerrarModal, mostrarToast, alCambiar
@@ -405,10 +408,43 @@ function actualizarAyudaApartado() {
     ayuda.classList.remove('oculto');
 }
 
+// --- AUTOCOMPLETAR EL CONCEPTO ---
+
+// Conceptos ya usados de ese tipo (los más recientes primero) como sugerencias
+function rellenarSugerenciasConcepto() {
+    const vistos = new Set();
+    const tipo = selectTipo.value;
+    const opciones = [];
+    ordenarPorFecha(movimientos).reverse().forEach(m => {
+        const concepto = (m.concepto || '').trim();
+        if (!concepto || (tipo === 'ingreso') !== esIngreso(m) || vistos.has(concepto.toLowerCase())) return;
+        vistos.add(concepto.toLowerCase());
+        if (opciones.length < 300) opciones.push(`<option value="${escaparHTML(concepto)}"></option>`);
+    });
+    $('lista-conceptos').innerHTML = opciones.join('');
+}
+
+// Si el concepto ya se usó, se copian su categoría, apartado e importe; si no, se aplica una regla aprendida
+function autocompletarConcepto() {
+    if (indiceEditando !== null) return;
+    const texto = inputConcepto.value.trim().toLowerCase();
+    if (!texto) return;
+    const tipo = selectTipo.value;
+    const anterior = ordenarPorFecha(movimientos).reverse()
+        .find(m => (m.concepto || '').trim().toLowerCase() === texto && (tipo === 'ingreso') === esIngreso(m));
+    const origen = anterior || buscarRegla(texto, tipo);
+    if (!origen) return;
+    if (!categoriaTocada && origen.categoria) rellenarCategorias(origen.categoria);
+    if (!apartadoTocado) rellenarApartados(origen.apartado || '');
+    if (anterior && !inputCantidad.value) inputCantidad.value = anterior.cantidad;
+}
+
 // opciones: { indice } para editar, { plantilla } para duplicar, o nada para uno nuevo
 export function abrirFormularioGasto(opciones = {}) {
     formulario.reset();
     indiceEditando = opciones.indice !== undefined ? opciones.indice : null;
+    categoriaTocada = false;
+    apartadoTocado = false;
     const origen = indiceEditando !== null ? movimientos[indiceEditando] : opciones.plantilla || null;
 
     selectTipo.value = origen ? (origen.tipo || 'gasto') : 'gasto';
@@ -420,6 +456,7 @@ export function abrirFormularioGasto(opciones = {}) {
     // Al duplicar, la fecha es la de hoy
     inputFecha.value = indiceEditando !== null && origen.fecha ? origen.fecha : obtenerFechaHoy();
     $('grupo-recurrente').classList.toggle('oculto', indiceEditando !== null);
+    rellenarSugerenciasConcepto();
 
     $('titulo-formulario-gasto').textContent = indiceEditando !== null ? 'Editar movimiento' : opciones.plantilla ? 'Duplicar movimiento' : 'Nuevo movimiento';
     $('btn-guardar-gasto').textContent = indiceEditando !== null ? 'Actualizar movimiento' : 'Guardar movimiento';
@@ -444,6 +481,7 @@ function guardarFormulario(evento) {
     };
     if (selectApartado.value) movimiento.apartado = selectApartado.value;
     if (inputNota.value.trim()) movimiento.nota = inputNota.value.trim();
+    aprenderRegla(movimiento.concepto, movimiento.tipo, movimiento.categoria, movimiento.apartado);
 
     let mensaje;
     if (indiceEditando !== null) {
@@ -874,9 +912,12 @@ export function iniciarGastos(funcionesAyuda) {
     }));
 
     // Formulario
-    selectTipo.addEventListener('change', () => { rellenarCategorias(null); actualizarAyudaApartado(); });
-    selectApartado.addEventListener('change', actualizarAyudaApartado);
+    selectTipo.addEventListener('change', () => { rellenarCategorias(null); actualizarAyudaApartado(); rellenarSugerenciasConcepto(); autocompletarConcepto(); });
+    selectApartado.addEventListener('change', () => { apartadoTocado = true; actualizarAyudaApartado(); });
+    inputConcepto.addEventListener('input', autocompletarConcepto);
+    inputConcepto.addEventListener('change', autocompletarConcepto);
     selectCategoria.addEventListener('change', () => {
+        categoriaTocada = true;
         if (selectCategoria.value !== '__nueva__') return;
         const nombre = prompt('Nombre de la nueva categoría:');
         rellenarCategorias(nombre && nombre.trim() ? asegurarCategoria(selectTipo.value, nombre) : null);
@@ -888,5 +929,6 @@ export function iniciarGastos(funcionesAyuda) {
     $('btn-cerrar-detalle').addEventListener('click', () => { detalleAbierto = null; ayudas.cerrarModal(modalDetalle); });
     modalDetalle.addEventListener('click', (e) => { if (e.target === modalDetalle) { detalleAbierto = null; ayudas.cerrarModal(modalDetalle); } });
 
+    iniciarReglas({ nombreApartado: id => { const a = apartadoPorId(id); return a ? a.nombre : ''; } });
     renderizarGastos();
 }
