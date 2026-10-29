@@ -1,13 +1,13 @@
 // Pantalla de Resumen: ahorro del mes y tasa de ahorro, últimos meses, patrimonio
 // (inversiones + saldos de tus cuentas) y objetivos de ahorro.
 
-import { leerDato, guardarDato, nuevoId } from './datos.js?v=23';
+import { leerDato, guardarDato, nuevoId } from './datos.js?v=24';
 import {
     obtenerMesActual, sumarMeses, nombreMesLargo, nombreMesCorto, obtenerFechaHoy, formatoFechaES,
     formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=23';
-import { resumenMes } from './gastos.js?v=23';
-import { obtenerTotalesCartera } from './inversiones.js?v=23';
+} from './utils.js?v=24';
+import { resumenMes } from './gastos.js?v=24';
+import { obtenerTotalesCartera } from './inversiones.js?v=24';
 
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICONO_ELIMINAR = '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
@@ -49,12 +49,12 @@ export function renderizarResumen() {
     const mes = obtenerMesActual();
     $('resumen-mes').textContent = nombreMesLargo(mes);
 
-    // Ahorro del mes (incluye los apartados: lo gastado menos lo devuelto)
+    // Ahorro del mes: ingresos menos gasto personal (los apartados, como Hogar, van aparte)
     const actual = resumenMes(mes);
-    const ahorro = actual.ingresos - actual.gastos;
+    const ahorro = actual.ingresos - actual.gastosPersonales;
     $('resumen-ahorro').textContent = formatoEuros(ahorro);
     $('resumen-ahorro').className = `total-importe importe-${clase(ahorro)}`;
-    $('resumen-ahorro-detalle').textContent = `Ingresos ${formatoEuros(actual.ingresos)} · Gastos ${formatoEuros(actual.gastos)}`;
+    $('resumen-ahorro-detalle').textContent = `Ingresos ${formatoEuros(actual.ingresos)} · Gasto personal ${formatoEuros(actual.gastosPersonales)}`;
     $('resumen-tasa').textContent = actual.ingresos > 0 ? `Tasa de ahorro: ${formatoPorcentaje((ahorro / actual.ingresos) * 100)}` : 'Sin ingresos este mes';
 
     // Patrimonio
@@ -68,7 +68,7 @@ export function renderizarResumen() {
     for (let i = 5; i >= 0; i--) {
         const m = sumarMeses(mes, -i);
         const r = resumenMes(m);
-        meses.push({ mes: m, ahorro: r.ingresos - r.gastos, ingresos: r.ingresos });
+        meses.push({ mes: m, ahorro: r.ingresos - r.gastosPersonales, ingresos: r.ingresos });
     }
     const maximo = Math.max(...meses.map(m => Math.abs(m.ahorro)), 1);
     $('resumen-meses').innerHTML = meses.map(m => `

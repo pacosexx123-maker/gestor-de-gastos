@@ -9,7 +9,8 @@ const CLAVES = {
     recurrentes: 'recurrentes',
     cuentas: 'cuentas',
     objetivos: 'objetivos',
-    historicoValor: 'historicoValor'
+    historicoValor: 'historicoValor',
+    reglas: 'reglasCategorias'
 };
 
 const POR_DEFECTO = {
@@ -21,7 +22,9 @@ const POR_DEFECTO = {
     recurrentes: [],
     cuentas: [],
     objetivos: [],
-    historicoValor: []
+    historicoValor: [],
+    // Reglas aprendidas para categorizar: [{ patron, tipo, categoria, apartado }]
+    reglas: []
 };
 
 function copia(valor) {

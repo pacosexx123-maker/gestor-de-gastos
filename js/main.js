@@ -1,27 +1,29 @@
 // Arranque de la app: navegación entre pestañas, avisos, ventanas, menú de datos
 // (exportar, copia de seguridad e importar) y conexión entre los módulos.
 
-import { obtenerFechaHoy, descargarArchivo, formatoFechaES } from './utils.js?v=23';
-import { bytesABase64, MIME_EXCEL } from './excel.js?v=23';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=23';
+import { obtenerFechaHoy, descargarArchivo, formatoFechaES } from './utils.js?v=24';
+import { bytesABase64, MIME_EXCEL } from './excel.js?v=24';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=24';
 import {
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, reemplazarInversiones,
     generarExcelInversiones, anadirInversiones, obtenerHistoricoValor, reemplazarHistoricoValor
-} from './inversiones.js?v=23';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo } from './importar-ordenes.js?v=23';
-import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=23';
-import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=23';
-import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=23';
-import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=23';
+} from './inversiones.js?v=24';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo, leerFilasArchivo, sonOrdenesDeBroker } from './importar-ordenes.js?v=24';
+import { iniciarImportacionBanco, importarBancoDesdeFilas } from './importar-banco.js?v=24';
+import { obtenerReglas, reemplazarReglas } from './reglas.js?v=24';
+import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=24';
+import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=24';
+import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=24';
+import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=24';
 import {
     iniciarGastos, abrirFormularioGasto, obtenerMovimientos, reemplazarMovimientos, anadirMovimientos,
     generarExcelGastos, renombrarCategoriaEnMovimientos, quitarApartadoDeMovimientos,
     obtenerPresupuestos, reemplazarPresupuestos, renderizarGastos
-} from './gastos.js?v=23';
-import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=23';
-import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=23';
-import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=23';
-import { iniciarBloqueo } from './bloqueo.js?v=23';
+} from './gastos.js?v=24';
+import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=24';
+import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=24';
+import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=24';
+import { iniciarBloqueo } from './bloqueo.js?v=24';
 
 // --- AVISOS (con opción de deshacer) ---
 
@@ -205,6 +207,7 @@ function obtenerDatosApp() {
         presupuestos: obtenerPresupuestos(),
         recurrentes: obtenerRecurrentes(),
         historicoValor: obtenerHistoricoValor(),
+        reglas: obtenerReglas(),
         ...obtenerDatosResumen()
     };
 }
@@ -218,6 +221,7 @@ function restaurarCopia(datos) {
         if (!copiaAntigua) reemplazarConfiguracion({ categorias: datos.categorias, apartados: datos.apartados });
         reemplazarPresupuestos(datos.presupuestos || {});
         reemplazarRecurrentes(datos.recurrentes || []);
+        if (Array.isArray(datos.reglas)) reemplazarReglas(datos.reglas);
         reemplazarDatosResumen(datos);
         reemplazarCarteras(Array.isArray(datos.carteras) ? datos.carteras : []);
         reemplazarValoraciones(datos.valoraciones || {});
@@ -261,7 +265,19 @@ document.getElementById('btn-exportar').addEventListener('click', () => {
 
 document.getElementById('btn-exportar-json').addEventListener('click', () => abrirModalCopia());
 
-// --- IMPORTAR (copia de seguridad u órdenes del bróker) ---
+// --- IMPORTAR (copia de seguridad, extracto del banco u órdenes del bróker) ---
+
+// CSV o Excel: con columna ISIN son órdenes del bróker; si no, el extracto del banco
+async function importarTabla(archivo) {
+    let filas;
+    try {
+        filas = await leerFilasArchivo(archivo);
+    } catch (error) {
+        return alert(`No se ha podido leer el archivo.\n\n${error.message}`);
+    }
+    if (sonOrdenesDeBroker(filas)) return importarOrdenesDesdeArchivo(archivo);
+    importarBancoDesdeFilas(filas);
+}
 
 const inputArchivo = document.getElementById('input-archivo-json');
 document.getElementById('btn-importar-json').addEventListener('click', () => inputArchivo.click());
@@ -275,7 +291,7 @@ inputArchivo.addEventListener('change', (evento) => {
         return alert('Este formato de Excel antiguo (.xls) no se puede leer. Ábrelo y guárdalo como .xlsx o .csv.');
     }
     if (['csv', 'xlsx'].includes(extension)) {
-        importarOrdenesDesdeArchivo(archivo).finally(() => { inputArchivo.value = ''; });
+        importarTabla(archivo).finally(() => { inputArchivo.value = ''; });
         return;
     }
 
@@ -285,7 +301,7 @@ inputArchivo.addEventListener('change', (evento) => {
         const texto = String(e.target.result || '').replace(/^﻿/, '').trim();
         // Un .txt puede ser una copia de seguridad (las del móvil se comparten como .txt) o órdenes del bróker
         if (extension === 'txt' && !texto.startsWith('{') && !texto.startsWith('[')) {
-            importarOrdenesDesdeArchivo(archivo);
+            importarTabla(archivo);
             return;
         }
         let datos;
@@ -331,6 +347,7 @@ intentar(() => iniciarGastos({ ...comunes, alCambiar: () => { if (seccionActiva 
 intentar(() => iniciarInversiones({ ...comunes, alCambiar: () => { if (seccionActiva === 'resumen') intentar(renderizarResumen); } }), 'las inversiones');
 intentar(() => iniciarExportaciones({ mostrarToast }), 'los archivos');
 intentar(() => iniciarImportacionOrdenes({ ...comunes, alImportar: () => cambiarSeccion('inversiones') }), 'la importación');
+intentar(() => iniciarImportacionBanco({ ...comunes, alImportar: () => cambiarSeccion('gastos') }), 'la importación del banco');
 intentar(() => iniciarCopiaSeguridad({ ...comunes, registrarExportacion, obtenerDatos: obtenerDatosApp }), 'las copias de seguridad');
 intentar(() => iniciarResumen({ ...comunes, irA: cambiarSeccion }), 'el resumen');
 intentar(() => iniciarRecurrentes({ mostrarToast, anadirGastos: anadirMovimientos, anadirInversiones }), 'los recurrentes');

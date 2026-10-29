@@ -8,7 +8,7 @@
 //   'rentabilidad' -> % de rentabilidad (valor = invertido × (1 + %/100)); se guarda el %,
 //                     así las aportaciones nuevas no aparecen como pérdida
 
-import { formatoNumero, formatoEuros, formatoDecimalVariable } from './utils.js?v=23';
+import { formatoNumero, formatoEuros, formatoDecimalVariable } from './utils.js?v=24';
 
 const modalValor = document.getElementById('modal-valor');
 const tituloValor = document.getElementById('valor-titulo');

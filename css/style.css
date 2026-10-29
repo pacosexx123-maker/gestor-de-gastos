@@ -1848,3 +1848,11 @@ html.bloqueada main, html.bloqueada .barra-navegacion, html.bloqueada .btn-flota
     .btn-flotante, .btn-flotante.btn-datos { width: 52px; height: 52px; padding: 0; justify-content: center; border-radius: 50%; }
     .btn-flotante span { display: none; }
 }
+
+/* Importar extracto del banco */
+.banco-concepto { font-size: 13px; color: var(--texto-secundario); overflow-wrap: anywhere; }
+.banco-selectores { display: flex; gap: 8px; }
+.banco-selectores select { height: 36px; font-size: 13px; flex: 1; min-width: 0; }
+.banco-acciones { padding: 0 24px 10px; text-align: right; }
+.lista-reglas { max-height: 280px; overflow-y: auto; }
+@media (max-width: 560px) { .banco-acciones { padding: 0 16px 10px; } }
