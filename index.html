@@ -19,8 +19,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=30">
-    <link rel="manifest" href="manifest.json?v=30">
+    <link rel="stylesheet" href="css/style.css?v=31">
+    <link rel="manifest" href="manifest.json?v=31">
 </head>
 <body>
 
@@ -172,9 +172,9 @@
                         <small id="resumen-historial">Movimientos del mes seleccionado</small>
                     </div>
                 </div>
-                <svg id="icono-flecha" class="icono-flecha" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg id="icono-flecha" class="icono-flecha" viewBox="0 0 24 24" style="transform: rotate(180deg)"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div id="contenedor-acordeon" class="acordeon-contenido">
+            <div id="contenedor-acordeon" class="acordeon-contenido abierto">
                 <div class="acordeon-interior">
                     <div class="filtros-operaciones filtros-movimientos">
                         <div class="filtro-busqueda">
@@ -185,20 +185,7 @@
                         <select id="filtro-mov-ambito" aria-label="Filtrar por personal o apartado"></select>
                         <label class="opcion-check filtro-todos"><input type="checkbox" id="filtro-mov-todos"><span>Todos los meses</span></label>
                     </div>
-                    <div class="tabla-contenedor">
-                        <table class="tabla tabla-historial">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Concepto</th>
-                                    <th class="col-categoria">Categoría</th>
-                                    <th class="col-cantidad">Cantidad</th>
-                                    <th class="col-acciones"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="lista-gastos"></tbody>
-                        </table>
-                    </div>
+                    <div id="lista-gastos" class="lista-movimientos"></div>
                 </div>
             </div>
         </section>
@@ -693,19 +680,7 @@
                 </button>
             </div>
             <div id="resumen-categorias" class="resumen-categorias"></div>
-            <div class="tabla-contenedor">
-                <table class="tabla tabla-detalle">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Concepto</th>
-                            <th class="col-cantidad">Cantidad</th>
-                            <th class="col-acciones"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="lista-detalle"></tbody>
-                </table>
-            </div>
+            <div id="lista-detalle" class="lista-movimientos lista-movimientos-modal"></div>
         </div>
     </div>
 
@@ -1121,6 +1096,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=30"></script>
+    <script type="module" src="js/main.js?v=31"></script>
 </body>
 </html>

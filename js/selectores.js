@@ -3,15 +3,18 @@
 //   página (oculto) y es el que guarda el valor, así que el resto del código no cambia.
 // - atajosFecha: botones "Hoy" y "Ayer" junto al campo de fecha, que sigue sirviendo para elegir otra.
 
-import { escaparHTML } from './utils.js?v=30';
+import { escaparHTML } from './utils.js?v=31';
 
 // Devuelve una función para volver a pintar los botones cuando cambian las opciones o el valor
-export function chipsDesdeSelect(select, contenedor) {
+// opciones.color(valor): color de un puntito delante del texto, o null para no ponerlo
+export function chipsDesdeSelect(select, contenedor, opciones = {}) {
     const pintar = () => {
         contenedor.innerHTML = [...select.options].map(opcion => {
             const activo = opcion.value === select.value;
             const extra = opcion.value === '__nueva__' ? ' chip-nueva' : '';
-            return `<button type="button" class="${activo ? 'activo' : ''}${extra}" data-valor="${escaparHTML(opcion.value)}" aria-pressed="${activo}">${escaparHTML(opcion.textContent)}</button>`;
+            const color = opciones.color ? opciones.color(opcion.value) : null;
+            const punto = color ? `<i class="chip-punto" style="background:${color}"></i>` : '';
+            return `<button type="button" class="${activo ? 'activo' : ''}${extra}" data-valor="${escaparHTML(opcion.value)}" aria-pressed="${activo}">${punto}${escaparHTML(opcion.textContent.trim())}</button>`;
         }).join('');
     };
     contenedor.addEventListener('click', evento => {
