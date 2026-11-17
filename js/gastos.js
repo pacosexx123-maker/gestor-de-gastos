@@ -2,17 +2,17 @@
 // (gastos que van aparte, como "Hogar"), gráficos, historial con filtros,
 // formulario (con notas y repetición mensual), duplicar y deshacer.
 
-import { leerDato, guardarDato } from './datos.js?v=29';
+import { leerDato, guardarDato } from './datos.js?v=30';
 import {
     obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesCorto, nombreMesLargo, formatoFechaES,
     formatoNumero, formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=29';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=29';
-import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=29';
-import { crearRecurrente } from './recurrentes.js?v=29';
-import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=29';
-import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=29';
-import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=29';
+} from './utils.js?v=30';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=30';
+import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=30';
+import { crearRecurrente } from './recurrentes.js?v=30';
+import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=30';
+import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=30';
+import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=30';
 
 const ICONO = {
     editar: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
@@ -426,7 +426,7 @@ function rellenarCategorias(seleccionada) {
 }
 
 function rellenarApartados(seleccionado) {
-    selectApartado.innerHTML = '<option value="">Personal (común)</option>' +
+    selectApartado.innerHTML = '<option value="">Personal </option>' +
         obtenerApartados().map(a => `<option value="${a.id}">${escaparHTML(a.nombre)}</option>`).join('');
     selectApartado.value = seleccionado && apartadoPorId(seleccionado) ? seleccionado : '';
     actualizarAyudaApartado();
