@@ -2045,6 +2045,11 @@ input:focus, select:focus, textarea:focus {
 .selector-fecha input.activo { border-color: var(--primario); box-shadow: inset 0 0 0 1px var(--primario); }
 .grupo-input > .chips + .texto-ayuda-form { margin: 8px 0 0; }
 
+/* Leyenda de los gráficos: sin recuadro al tocar una categoría (el gráfico ya atenúa las demás) */
+.leyenda-grafico li:hover, .leyenda-grafico li.resaltado { background: transparent; }
+.leyenda-grafico li:focus { outline: none; }
+.leyenda-grafico li.resaltado .leyenda-nombre { font-weight: 700; }
+
 /* Controles segmentados en el móvil: todas las opciones caben dentro del recuadro */
 @media (max-width: 560px) {
     .control-segmentado { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
