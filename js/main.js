@@ -1,30 +1,30 @@
 // Arranque de la app: navegación entre pestañas, avisos, ventanas, menú de datos
 // (exportar, copia de seguridad e importar) y conexión entre los módulos.
 
-import { obtenerFechaHoy, descargarArchivo, formatoFechaES } from './utils.js?v=34';
-import { bytesABase64, MIME_EXCEL } from './excel.js?v=34';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=34';
+import { obtenerFechaHoy, descargarArchivo, formatoFechaES } from './utils.js?v=35';
+import { bytesABase64, MIME_EXCEL } from './excel.js?v=35';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=35';
 import {
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, reemplazarInversiones,
     generarExcelInversiones, hojasExcelInversiones, anadirInversiones, obtenerHistoricoValor, reemplazarHistoricoValor
-} from './inversiones.js?v=34';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo, leerFilasArchivo, sonOrdenesDeBroker } from './importar-ordenes.js?v=34';
-import { iniciarImportacionBanco, importarBancoDesdeFilas } from './importar-banco.js?v=34';
-import { obtenerReglas, reemplazarReglas } from './reglas.js?v=34';
-import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=34';
-import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=34';
-import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=34';
-import { iniciarAjustes, renderizarAjustes, aplicarTema } from './ajustes.js?v=34';
-import { crearLibroExcel } from './excel.js?v=34';
+} from './inversiones.js?v=35';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo, leerFilasArchivo, sonOrdenesDeBroker } from './importar-ordenes.js?v=35';
+import { iniciarImportacionBanco, importarBancoDesdeFilas } from './importar-banco.js?v=35';
+import { obtenerReglas, reemplazarReglas } from './reglas.js?v=35';
+import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=35';
+import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=35';
+import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=35';
+import { iniciarAjustes, renderizarAjustes, aplicarTema } from './ajustes.js?v=35';
+import { crearLibroExcel } from './excel.js?v=35';
 import {
     iniciarGastos, abrirFormularioGasto, obtenerMovimientos, reemplazarMovimientos, anadirMovimientos,
     generarExcelGastos, hojasExcelGastos, renombrarCategoriaEnMovimientos, quitarApartadoDeMovimientos,
     obtenerPresupuestos, reemplazarPresupuestos, renderizarGastos
-} from './gastos.js?v=34';
-import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=34';
-import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=34';
-import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=34';
-import { iniciarBloqueo } from './bloqueo.js?v=34';
+} from './gastos.js?v=35';
+import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=35';
+import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=35';
+import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=35';
+import { iniciarBloqueo } from './bloqueo.js?v=35';
 
 // --- AVISOS (con opción de deshacer) ---
 
@@ -310,7 +310,7 @@ function obtenerDatosApp() {
 }
 
 // Preferencias que viajan en la copia (el PIN no, a propósito: es de cada móvil)
-const CLAVES_PREFERENCIAS = ['tema', 'seccionInicio', 'modoAnalisisGastos', 'modoDistribucion'];
+const CLAVES_PREFERENCIAS = ['tema', 'seccionInicio', 'modoAnalisisGastos', 'modoDistribucion', 'totalesPorDia'];
 
 function obtenerPreferencias() {
     const preferencias = {};

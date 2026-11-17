@@ -3,10 +3,10 @@
 import {
     abrirModalCopia, hayContrasenaGuardada, guardarContrasenaCopia,
     obtenerDiasRecordatorio, fijarDiasRecordatorio, describirUltimaCopia
-} from './copia-seguridad.js?v=34';
-import { formatoNumero } from './utils.js?v=34';
-import { CLAVES_ALMACEN } from './datos.js?v=34';
-import { abrirConfiguracion } from './configuracion.js?v=34';
+} from './copia-seguridad.js?v=35';
+import { formatoNumero } from './utils.js?v=35';
+import { CLAVES_ALMACEN } from './datos.js?v=35';
+import { abrirConfiguracion } from './configuracion.js?v=35';
 
 const TEMAS = ['sistema', 'claro', 'oscuro'];
 const CLAVES_DATOS = [...CLAVES_ALMACEN, 'inversiones', 'carteras', 'valoraciones', 'exportaciones', 'ultimaCopia', 'recordatorioPospuesto',

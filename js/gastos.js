@@ -2,19 +2,19 @@
 // (gastos que van aparte, como "Hogar"), gráficos, historial con filtros,
 // formulario (con notas y repetición mensual), duplicar y deshacer.
 
-import { leerDato, guardarDato } from './datos.js?v=34';
+import { leerDato, guardarDato } from './datos.js?v=35';
 import {
     obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesCorto, nombreMesLargo, formatoFechaES,
     formatoNumero, formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=34';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=34';
-import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=34';
-import { crearRecurrente } from './recurrentes.js?v=34';
-import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=34';
-import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=34';
-import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=34';
-import { conectarFilasDeslizables } from './filas-deslizables.js?v=34';
-import { etiquetaDia } from './utils.js?v=34';
+} from './utils.js?v=35';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=35';
+import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=35';
+import { crearRecurrente } from './recurrentes.js?v=35';
+import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=35';
+import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=35';
+import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=35';
+import { conectarFilasDeslizables } from './filas-deslizables.js?v=35';
+import { etiquetaDia } from './utils.js?v=35';
 
 const ICONO = {
     editar: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
@@ -290,7 +290,8 @@ const colorMovimiento = m => esIngreso(m) ? 'var(--ingreso)' : colorSerieCategor
 // Un movimiento: deslizándolo hacia la izquierda aparecen "Editar" y "Eliminar" (tocarlo también lo edita)
 function filaMovimiento(m, indice) {
     const apartado = m.apartado ? apartadoPorId(m.apartado) : null;
-    const categoria = !apartado || (m.categoria && m.categoria !== apartado.nombre) ? escaparHTML(m.categoria || 'Otros') : '';
+    const nombreCategoria = !apartado || (m.categoria && m.categoria !== apartado.nombre) ? m.categoria || 'Otros' : '';
+    const categoria = escaparHTML([nombreCategoria, m.subcategoria].filter(Boolean).join(' · '));
     return `
         <div class="mov" data-indice="${indice}">
             <div class="mov-acciones">
@@ -391,7 +392,7 @@ function renderizarHistorial(mes) {
         if (categoria && m.categoria !== categoria) return false;
         if (ambito === 'personal' && m.apartado) return false;
         if (ambito && ambito !== 'personal' && m.apartado !== ambito) return false;
-        if (texto && !`${m.concepto || ''} ${m.nota || ''} ${m.categoria || ''}`.toLowerCase().includes(texto)) return false;
+        if (texto && !`${m.concepto || ''} ${m.nota || ''} ${m.categoria || ''} ${m.subcategoria || ''}`.toLowerCase().includes(texto)) return false;
         return true;
     }).sort((a, b) => (b.m.fecha || '').localeCompare(a.m.fecha || '') || b.indice - a.indice);
 
@@ -470,6 +471,71 @@ function rellenarCategorias(seleccionada) {
         '<option value="__nueva__">+ Nueva categoría…</option>';
     selectCategoria.value = seleccionada && lista.includes(seleccionada) ? seleccionada : lista[0];
     pintarCategorias();
+    pintarSubcategorias();
+}
+
+// --- SUBCATEGORÍA (opcional) ---
+// Las de cada categoría son las que ya se han usado en algún movimiento (las más usadas primero),
+// más las que se crean en el formulario. No hace falta gestionarlas aparte.
+
+let subcategoria = '';
+let subcategoriasNuevas = []; // creadas en el formulario abierto, aún sin guardar
+
+function subcategoriasDe(categoria) {
+    const usos = {};
+    movimientos.forEach(m => {
+        if (m.categoria === categoria && m.subcategoria) usos[m.subcategoria] = (usos[m.subcategoria] || 0) + 1;
+    });
+    const lista = Object.keys(usos).sort((a, b) => usos[b] - usos[a] || a.localeCompare(b, 'es'));
+    subcategoriasNuevas.forEach(s => { if (!lista.includes(s)) lista.push(s); });
+    if (subcategoria && !lista.includes(subcategoria)) lista.push(subcategoria);
+    return lista;
+}
+
+function pintarSubcategorias() {
+    const contenedor = $('chips-subcategoria');
+    const categoria = selectCategoria.value;
+    $('grupo-subcategoria').classList.toggle('oculto', !categoria || categoria === '__nueva__');
+    const opciones = ['', ...subcategoriasDe(categoria)];
+    contenedor.innerHTML = opciones.map(s => {
+        const activo = s === subcategoria;
+        return `<button type="button" class="${activo ? 'activo' : ''}" data-subcategoria="${escaparHTML(s)}" aria-pressed="${activo}">${s ? escaparHTML(s) : 'Ninguna'}</button>`;
+    }).join('') + '<button type="button" class="chip-nueva" data-nueva-subcategoria>+ Nueva</button>';
+}
+
+function elegirSubcategoria(valor) {
+    subcategoria = valor;
+    pintarSubcategorias();
+}
+
+// "+ Nueva": se cambia por un campo de texto en la misma fila
+function pedirSubcategoria(boton) {
+    const campo = document.createElement('input');
+    campo.type = 'text';
+    campo.className = 'chip-campo';
+    campo.placeholder = 'Ej. Cine';
+    campo.maxLength = 40;
+    campo.setAttribute('aria-label', 'Nueva subcategoría');
+    boton.replaceWith(campo);
+    campo.focus();
+    let hecho = false;
+    const terminar = guardarla => {
+        if (hecho) return;
+        hecho = true;
+        const nombre = campo.value.trim();
+        if (guardarla && nombre) {
+            const existente = subcategoriasDe(selectCategoria.value).find(s => s.toLowerCase() === nombre.toLowerCase());
+            if (!existente) subcategoriasNuevas.push(nombre);
+            elegirSubcategoria(existente || nombre);
+        } else {
+            pintarSubcategorias();
+        }
+    };
+    campo.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); terminar(true); }
+        if (e.key === 'Escape') { e.preventDefault(); terminar(false); }
+    });
+    campo.addEventListener('blur', () => terminar(true));
 }
 
 function rellenarApartados(seleccionado) {
@@ -516,7 +582,10 @@ function autocompletarConcepto() {
         .find(m => (m.concepto || '').trim().toLowerCase() === texto && (tipo === 'ingreso') === esIngreso(m));
     const origen = anterior || buscarRegla(texto, tipo);
     if (!origen) return;
-    if (!categoriaTocada && origen.categoria) rellenarCategorias(origen.categoria);
+    if (!categoriaTocada && origen.categoria) {
+        subcategoria = anterior ? anterior.subcategoria || '' : '';
+        rellenarCategorias(origen.categoria);
+    }
     if (!apartadoTocado) rellenarApartados(origen.apartado || '');
     if (anterior && !inputCantidad.value) inputCantidad.value = anterior.cantidad;
 }
@@ -535,6 +604,9 @@ export function abrirFormularioGasto(opciones = {}) {
     inputConcepto.value = origen ? origen.concepto || '' : '';
     inputCantidad.value = origen ? origen.cantidad || '' : '';
     inputNota.value = origen ? origen.nota || '' : '';
+    subcategoriasNuevas = [];
+    subcategoria = origen ? origen.subcategoria || '' : '';
+    pintarSubcategorias();
     // Al duplicar, la fecha es la de hoy
     inputFecha.value = indiceEditando !== null && origen.fecha ? origen.fecha : obtenerFechaHoy();
     $('grupo-recurrente').classList.toggle('oculto', indiceEditando !== null);
@@ -564,6 +636,7 @@ function guardarFormulario(evento) {
         categoria: selectCategoria.value === '__nueva__' ? obtenerCategorias(selectTipo.value)[0] : selectCategoria.value
     };
     if (selectApartado.value) movimiento.apartado = selectApartado.value;
+    if (subcategoria && movimiento.categoria === selectCategoria.value) movimiento.subcategoria = subcategoria;
     if (inputNota.value.trim()) movimiento.nota = inputNota.value.trim();
     aprenderRegla(movimiento.concepto, movimiento.tipo, movimiento.categoria, movimiento.apartado);
 
@@ -639,8 +712,10 @@ function nombreApartado(m) {
 
 // Lista de movimientos con filtros y totales (con fórmulas).
 // alcance: 'personal' (los totales solo cuentan lo personal) o el nombre de un apartado.
-function listaMovimientos(hoja, lista, alcance = 'personal') {
-    const cabecera = filaCabecera(hoja, CABECERA_MOVIMIENTOS, 6);
+// conSubcategoria: añade al final la columna "Subcategoría" (solo en la hoja Movimientos, que no lleva gráficas al lado)
+function listaMovimientos(hoja, lista, alcance = 'personal', conSubcategoria = false) {
+    const cabecera = filaCabecera(hoja, conSubcategoria ? [...CABECERA_MOVIMIENTOS, 'Subcategoría'] : CABECERA_MOVIMIENTOS, 6);
+    if (conSubcategoria) hoja.filas[cabecera - 1][7].derecha = false;
     ordenarPorFecha(lista).forEach(m => hoja.anadir([
         { v: m.fecha, tipo: 'fecha' },
         { v: esIngreso(m) ? 'Ingreso' : 'Gasto' },
@@ -648,11 +723,12 @@ function listaMovimientos(hoja, lista, alcance = 'personal') {
         { v: m.categoria || 'Otros' },
         { v: m.concepto || 'Sin concepto' },
         { v: m.nota || '' },
-        { v: esIngreso(m) ? importe(m) : -importe(m), tipo: 'dineroSigno' }
+        { v: esIngreso(m) ? importe(m) : -importe(m), tipo: 'dineroSigno' },
+        ...(conSubcategoria ? [{ v: m.subcategoria || '' }] : [])
     ]));
     const ultima = Math.max(hoja.filaActual, cabecera + 1);
     const rango = c => `${ref(c, cabecera + 1)}:${ref(c, ultima)}`;
-    hoja.filtro = `A${cabecera}:G${ultima}`;
+    hoja.filtro = `A${cabecera}:${conSubcategoria ? 'H' : 'G'}${ultima}`;
     hoja.anadir([]);
 
     const delAlcance = lista.filter(m => alcance === 'personal' ? !m.apartado : nombreApartado(m) === alcance);
@@ -937,9 +1013,10 @@ export function hojasExcelGastos() {
 
     const total = hojaTotal(meses);
     const todos = new Hoja('Movimientos');
-    todos.anchos = [12, 10, 14, 16, 30, 26, 14];
+    const conSubcategoria = movimientos.some(m => m.subcategoria);
+    todos.anchos = conSubcategoria ? [12, 10, 14, 16, 30, 26, 14, 16] : [12, 10, 14, 16, 30, 26, 14];
     todos.congelarFilas = 1;
-    listaMovimientos(todos, movimientos, 'personal');
+    listaMovimientos(todos, movimientos, 'personal', conSubcategoria);
 
     const porApartado = apartadosConDatos().map(({ apartado, lista }) => hojaApartado(apartado, lista, meses));
     const porMes = agruparPorMes(movimientos).filter(g => g.mes !== 'sin-fecha').map(g => hojaMes(g.mes, g.elementos));
@@ -998,6 +1075,22 @@ export function iniciarGastos(funcionesAyuda) {
         $('btn-filtros-mov').classList.toggle('activo', abierto);
         $('btn-filtros-mov').setAttribute('aria-expanded', String(abierto));
     });
+    // Botón "Totales": muestra u oculta lo gastado e ingresado cada día (oculto al principio; se recuerda)
+    const botonTotales = $('btn-totales-dia');
+    const fijarTotales = ver => {
+        document.documentElement.classList.toggle('ver-totales-dia', ver);
+        botonTotales.classList.toggle('activo', ver);
+        botonTotales.setAttribute('aria-pressed', String(ver));
+    };
+    let verTotales = false;
+    try { verTotales = localStorage.getItem('totalesPorDia') === '1'; } catch (error) { /* sin acceso */ }
+    fijarTotales(verTotales);
+    botonTotales.addEventListener('click', () => {
+        verTotales = !verTotales;
+        fijarTotales(verTotales);
+        try { verTotales ? localStorage.setItem('totalesPorDia', '1') : localStorage.removeItem('totalesPorDia'); } catch (error) { /* sin acceso */ }
+    });
+
     $('btn-quitar-filtros-mov').addEventListener('click', () => {
         FILTROS_MOV.forEach(id => { $(id).value = ''; });
         pintarFiltros();
@@ -1013,17 +1106,25 @@ export function iniciarGastos(funcionesAyuda) {
     }));
 
     // Formulario
-    selectTipo.addEventListener('change', () => { rellenarCategorias(null); actualizarAyudaApartado(); rellenarSugerenciasConcepto(); autocompletarConcepto(); });
+    selectTipo.addEventListener('change', () => { subcategoria = ''; rellenarCategorias(null); actualizarAyudaApartado(); rellenarSugerenciasConcepto(); autocompletarConcepto(); });
     selectApartado.addEventListener('change', () => { apartadoTocado = true; actualizarAyudaApartado(); });
     inputConcepto.addEventListener('input', autocompletarConcepto);
     inputConcepto.addEventListener('change', autocompletarConcepto);
     selectCategoria.addEventListener('change', () => {
         categoriaTocada = true;
+        subcategoria = '';
+        pintarSubcategorias();
         if (selectCategoria.value !== '__nueva__') return;
         const nombre = prompt('Nombre de la nueva categoría:');
         rellenarCategorias(nombre && nombre.trim() ? asegurarCategoria(selectTipo.value, nombre) : null);
     });
     $('btn-config-desde-formulario').addEventListener('click', abrirConfiguracion);
+    $('chips-subcategoria').addEventListener('click', e => {
+        const nueva = e.target.closest('[data-nueva-subcategoria]');
+        if (nueva) return pedirSubcategoria(nueva);
+        const boton = e.target.closest('[data-subcategoria]');
+        if (boton) elegirSubcategoria(boton.getAttribute('data-subcategoria'));
+    });
     formulario.addEventListener('submit', guardarFormulario);
     $('btn-cerrar-formulario').addEventListener('click', cerrarFormulario);
     modalFormulario.addEventListener('click', (e) => { if (e.target === modalFormulario) cerrarFormulario(); });

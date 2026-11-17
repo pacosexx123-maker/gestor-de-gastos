@@ -19,8 +19,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=34">
-    <link rel="manifest" href="manifest.json?v=34">
+    <link rel="stylesheet" href="css/style.css?v=35">
+    <link rel="manifest" href="manifest.json?v=35">
 </head>
 <body>
 
@@ -181,12 +181,16 @@
                         <div class="filtros-barra">
                             <div class="filtro-busqueda">
                                 <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                                <input type="search" id="filtro-mov-texto" placeholder="Buscar concepto o nota" autocomplete="off" aria-label="Buscar concepto o nota">
+                                <input type="search" id="filtro-mov-texto" placeholder="Buscar" autocomplete="off" aria-label="Buscar concepto o nota">
                             </div>
                             <button type="button" id="btn-filtros-mov" class="btn-filtros" aria-expanded="false" aria-controls="panel-filtros-mov">
                                 <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
                                 <span>Filtros</span>
                                 <em id="num-filtros-mov" class="oculto">0</em>
+                            </button>
+                            <button type="button" id="btn-totales-dia" class="btn-filtros" aria-pressed="false" title="Mostrar lo gastado cada día">
+                                <svg viewBox="0 0 24 24"><path d="M18 4H6l6 8-6 8h12"/></svg>
+                                <span>Totales</span>
                             </button>
                         </div>
                         <div id="panel-filtros-mov" class="panel-filtros oculto">
@@ -652,6 +656,10 @@
                     <label class="etiqueta-con-enlace">Categoría <button type="button" id="btn-config-desde-formulario" class="enlace">Gestionar</button></label>
                     <select id="categoria" class="select-oculto" tabindex="-1" aria-hidden="true"></select>
                     <div class="chips" id="chips-categoria" role="group" aria-label="Categoría"></div>
+                </div>
+                <div class="grupo-input" id="grupo-subcategoria">
+                    <label>Subcategoría <em class="opcional">(opcional)</em></label>
+                    <div class="chips" id="chips-subcategoria" role="group" aria-label="Subcategoría"></div>
                 </div>
                 <div class="grupo-input">
                     <label>¿Dónde va?</label>
@@ -1126,6 +1134,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=34"></script>
+    <script type="module" src="js/main.js?v=35"></script>
 </body>
 </html>

@@ -2061,7 +2061,11 @@ input:focus, select:focus, textarea:focus {
 }
 .mov-dia:first-child .mov-dia-titulo { margin-top: 8px; }
 .mov-dia-titulo { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-.mov-dia-total { display: inline-flex; gap: 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mov-dia-total { display: none; gap: 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ver-totales-dia .mov-dia-total { display: inline-flex; } /* botón "Totales" del historial */
+
+/* Campo para escribir una subcategoría nueva, con forma de botón */
+.chips .chip-campo { width: 130px; height: 36px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 600; }
 .mov-dia-total .monto-positivo { font-weight: 700; }
 
 /* Operaciones de inversión en la lista: importe y rentabilidad a la derecha, ISIN debajo del nombre */
