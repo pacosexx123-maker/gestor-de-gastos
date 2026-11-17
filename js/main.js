@@ -1,29 +1,30 @@
 // Arranque de la app: navegación entre pestañas, avisos, ventanas, menú de datos
 // (exportar, copia de seguridad e importar) y conexión entre los módulos.
 
-import { obtenerFechaHoy, descargarArchivo, formatoFechaES } from './utils.js?v=33';
-import { bytesABase64, MIME_EXCEL } from './excel.js?v=33';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=33';
+import { obtenerFechaHoy, descargarArchivo, formatoFechaES } from './utils.js?v=34';
+import { bytesABase64, MIME_EXCEL } from './excel.js?v=34';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=34';
 import {
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, reemplazarInversiones,
-    generarExcelInversiones, anadirInversiones, obtenerHistoricoValor, reemplazarHistoricoValor
-} from './inversiones.js?v=33';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo, leerFilasArchivo, sonOrdenesDeBroker } from './importar-ordenes.js?v=33';
-import { iniciarImportacionBanco, importarBancoDesdeFilas } from './importar-banco.js?v=33';
-import { obtenerReglas, reemplazarReglas } from './reglas.js?v=33';
-import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=33';
-import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=33';
-import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=33';
-import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=33';
+    generarExcelInversiones, hojasExcelInversiones, anadirInversiones, obtenerHistoricoValor, reemplazarHistoricoValor
+} from './inversiones.js?v=34';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo, leerFilasArchivo, sonOrdenesDeBroker } from './importar-ordenes.js?v=34';
+import { iniciarImportacionBanco, importarBancoDesdeFilas } from './importar-banco.js?v=34';
+import { obtenerReglas, reemplazarReglas } from './reglas.js?v=34';
+import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=34';
+import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=34';
+import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=34';
+import { iniciarAjustes, renderizarAjustes, aplicarTema } from './ajustes.js?v=34';
+import { crearLibroExcel } from './excel.js?v=34';
 import {
     iniciarGastos, abrirFormularioGasto, obtenerMovimientos, reemplazarMovimientos, anadirMovimientos,
-    generarExcelGastos, renombrarCategoriaEnMovimientos, quitarApartadoDeMovimientos,
+    generarExcelGastos, hojasExcelGastos, renombrarCategoriaEnMovimientos, quitarApartadoDeMovimientos,
     obtenerPresupuestos, reemplazarPresupuestos, renderizarGastos
-} from './gastos.js?v=33';
-import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=33';
-import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=33';
-import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=33';
-import { iniciarBloqueo } from './bloqueo.js?v=33';
+} from './gastos.js?v=34';
+import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=34';
+import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=34';
+import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=34';
+import { iniciarBloqueo } from './bloqueo.js?v=34';
 
 // --- AVISOS (con opción de deshacer) ---
 
@@ -63,7 +64,7 @@ const SECCIONES = ['resumen', 'gastos', 'inversiones', 'archivos', 'ajustes'];
 const QUE_EXPORTA = {
     gastos: { titulo: 'Exportar a Excel (solo gastos)', detalle: 'Gastos (.xlsx)' },
     inversiones: { titulo: 'Exportar a Excel (solo inversiones)', detalle: 'Inversiones (.xlsx)' },
-    archivos: { titulo: 'Exportar a Excel', detalle: 'Gastos e inversiones, dos archivos (.xlsx)' }
+    archivos: { titulo: 'Exportar a Excel', detalle: 'Gastos e inversiones en un archivo (.xlsx)' }
 };
 // Pantalla al abrir: la elegida en Ajustes o, por defecto, la última que se usó
 const seccionInicio = localStorage.getItem('seccionInicio');
@@ -303,8 +304,31 @@ function obtenerDatosApp() {
         recurrentes: obtenerRecurrentes(),
         historicoValor: obtenerHistoricoValor(),
         reglas: obtenerReglas(),
+        preferencias: obtenerPreferencias(),
         ...obtenerDatosResumen()
     };
+}
+
+// Preferencias que viajan en la copia (el PIN no, a propósito: es de cada móvil)
+const CLAVES_PREFERENCIAS = ['tema', 'seccionInicio', 'modoAnalisisGastos', 'modoDistribucion'];
+
+function obtenerPreferencias() {
+    const preferencias = {};
+    CLAVES_PREFERENCIAS.forEach(clave => {
+        try { const valor = localStorage.getItem(clave); if (valor !== null) preferencias[clave] = valor; } catch (error) { /* sin acceso */ }
+    });
+    return preferencias;
+}
+
+function restaurarPreferencias(preferencias) {
+    if (!preferencias || typeof preferencias !== 'object') return; // copias anteriores: se quedan las de este móvil
+    CLAVES_PREFERENCIAS.forEach(clave => {
+        try {
+            if (typeof preferencias[clave] === 'string') localStorage.setItem(clave, preferencias[clave]);
+            else localStorage.removeItem(clave);
+        } catch (error) { /* sin acceso */ }
+    });
+    intentar(() => { aplicarTema(preferencias.tema || 'sistema'); renderizarAjustes(); });
 }
 
 function restaurarCopia(datos) {
@@ -323,6 +347,7 @@ function restaurarCopia(datos) {
         reemplazarHistoricoValor(datos.historicoValor || []);
         reemplazarInversiones(Array.isArray(datos.inversiones) ? datos.inversiones : []);
         reemplazarMovimientos(datos.movimientos, copiaAntigua);
+        restaurarPreferencias(datos.preferencias);
     } else {
         return alert('El archivo seleccionado no es válido.');
     }
@@ -343,9 +368,17 @@ function exportarYRegistrar({ contenido, mime, nombreArchivo, tipo, formato }) {
     });
 }
 
+// Un solo Excel con las hojas de gastos y las de inversiones (estas, con "Inv." delante para distinguirlas)
+function generarExcelConjunto() {
+    const gastos = hojasExcelGastos() || [];
+    const inversiones = (hojasExcelInversiones() || []).map(hoja => { hoja.nombre = `Inv. ${hoja.nombre}`; return hoja; });
+    return gastos.length || inversiones.length ? crearLibroExcel([...gastos, ...inversiones]) : null;
+}
+
 const EXCELS = {
     gastos: { generar: () => generarExcelGastos(), nombre: 'TusGastos', vacio: 'No hay movimientos que exportar.', hecho: 'Gastos exportados' },
-    inversiones: { generar: () => generarExcelInversiones(), nombre: 'TusInversiones', vacio: 'No hay inversiones que exportar.', hecho: 'Inversiones exportadas' }
+    inversiones: { generar: () => generarExcelInversiones(), nombre: 'TusInversiones', vacio: 'No hay inversiones que exportar.', hecho: 'Inversiones exportadas' },
+    todo: { generar: generarExcelConjunto, nombre: 'TusGastosEInversiones', vacio: 'No hay movimientos ni inversiones que exportar.', hecho: 'Gastos e inversiones exportados en un Excel' }
 };
 
 function exportarExcel(tipo) {
@@ -361,20 +394,10 @@ function exportarExcel(tipo) {
     return true;
 }
 
-// Gastos: solo gastos · Inversiones: solo inversiones · Archivos: los dos Excel ·
+// Gastos: solo gastos · Inversiones: solo inversiones · Archivos: los dos en un mismo Excel ·
 // Resumen y Ajustes: los gastos, como hasta ahora
 document.getElementById('btn-exportar').addEventListener('click', () => {
-    if (seccionActiva === 'archivos') {
-        const hechoGastos = exportarExcel('gastos');
-        // Un pequeño margen entre las dos descargas para que el navegador del móvil no bloquee la segunda
-        setTimeout(() => {
-            const hechoInversiones = exportarExcel('inversiones');
-            if (!hechoGastos && !hechoInversiones) return alert('No hay movimientos ni inversiones que exportar.');
-            mostrarToast(hechoGastos && hechoInversiones ? 'Gastos e inversiones exportados' : hechoGastos ? 'Gastos exportados (no hay inversiones)' : 'Inversiones exportadas (no hay movimientos)');
-        }, 800);
-        return;
-    }
-    const tipo = seccionActiva === 'inversiones' ? 'inversiones' : 'gastos';
+    const tipo = seccionActiva === 'archivos' ? 'todo' : seccionActiva === 'inversiones' ? 'inversiones' : 'gastos';
     if (!exportarExcel(tipo)) return alert(EXCELS[tipo].vacio);
     mostrarToast(EXCELS[tipo].hecho);
 });
