@@ -2,7 +2,7 @@
 // Cada elemento: { nombre, total, porcentaje, color } — el color lo asigna quien llama
 // según la entidad (no según su posición), para que no cambie al variar los importes.
 
-import { formatoEuros as euros, formatoPorcentaje } from './utils.js?v=27';
+import { formatoEuros as euros, formatoPorcentaje } from './utils.js?v=28';
 
 export const MAXIMO_SERIES = 7; // a partir de aquí se agrupan en "Otros"
 
@@ -128,6 +128,7 @@ export function conectarInteraccion(contenedor, elementos) {
         });
     });
     grafico.addEventListener('mouseleave', () => { if (fijado === null) resaltar(null); });
+    soltarAlTocarFuera(grafico, () => fijado !== null, () => { fijado = null; resaltar(null); });
 }
 
 // --- EVOLUCIÓN MENSUAL (ingresos y gastos, columnas agrupadas por mes) ---
@@ -189,6 +190,21 @@ export function conectarEvolucion(contenedor, meses) {
         nodo.addEventListener('click', () => { fijado = fijado === indice ? null : indice; resaltar(fijado); });
     });
     grafico.addEventListener('mouseleave', () => { if (fijado === null) resaltar(null); });
+    soltarAlTocarFuera(grafico, () => fijado !== null, () => { fijado = null; resaltar(null); });
+}
+
+// Con un elemento seleccionado, tocar en cualquier otro sitio (fuera de un sector, barra,
+// mes o elemento de la leyenda) quita la selección y vuelve a mostrar el total
+function soltarAlTocarFuera(grafico, haySeleccion, soltar) {
+    const alTocar = evento => {
+        if (!grafico.isConnected) { document.removeEventListener('click', alTocar, true); return; } // el gráfico se ha vuelto a pintar
+        if (!haySeleccion()) return;
+        const elemento = evento.target.closest ? evento.target.closest('[data-i]') : null;
+        if (elemento && grafico.contains(elemento)) return;
+        if (document.activeElement && grafico.contains(document.activeElement)) document.activeElement.blur();
+        soltar();
+    };
+    document.addEventListener('click', alTocar, true);
 }
 
 // --- EVOLUCIÓN DE LA CARTERA (líneas: lo aportado y lo que vale) ---
