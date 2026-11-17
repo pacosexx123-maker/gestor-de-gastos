@@ -2083,11 +2083,81 @@ input:focus, select:focus, textarea:focus {
 .mov-texto .pildora { padding: 1px 8px; font-size: 11px; }
 .mov-texto .nota-movimiento { display: block; margin: 0; }
 .mov-importe { flex-shrink: 0; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.mov-acciones { display: none; flex-wrap: wrap; gap: 8px; padding: 0 0 12px 21px; }
-.mov.abierto .mov-acciones { display: flex; animation: aparecerSuave 0.2s ease-out; }
-.mov.abierto .mov-fila .mov-texto b { font-weight: 700; }
-.mov-acciones svg { width: 14px; height: 14px; }
+/* Deslizar a la izquierda: la fila se mueve y debajo aparecen poco a poco "Editar" y "Eliminar" */
+.mov { position: relative; overflow: hidden; }
+.mov-fila {
+    position: relative;
+    z-index: 1;
+    background: var(--fondo-app);
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.lista-movimientos-modal .mov-fila { background: var(--superficie); }
+.mov-acciones { position: absolute; top: 0; right: 0; bottom: 0; display: flex; width: 152px; }
+.mov-accion {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 0;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    opacity: var(--progreso, 0);
+}
+.mov-accion svg, .mov-accion span { transform: scale(calc(0.6 + 0.4 * var(--progreso, 0))); }
+.mov-accion svg { width: 18px; height: 18px; }
+.mov-accion-editar { background: var(--texto-secundario); color: var(--fondo-app); }
+.mov-accion-eliminar { background: var(--gasto); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .mov-fila { transition: none; } }
 .lista-movimientos-modal { padding: 0 24px 16px; }
+
+/* Filtros del historial: buscador + botón "Filtros" que abre un panel con botones */
+.filtros-historial { display: flex; flex-direction: column; gap: 12px; padding: 14px 0 4px; }
+.filtros-barra { display: flex; gap: 8px; }
+.filtros-barra .filtro-busqueda input { height: 40px; border-radius: 999px; font-size: 14px; }
+.btn-filtros {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    height: 40px;
+    padding: 0 14px;
+    border: 1px solid var(--borde);
+    border-radius: 999px;
+    background: var(--superficie);
+    color: var(--texto-principal);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-filtros svg { width: 16px; height: 16px; }
+.btn-filtros.activo { border-color: var(--primario); box-shadow: inset 0 0 0 1px var(--primario); }
+.btn-filtros em {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--primario);
+    color: var(--primario-texto);
+    font-size: 11px;
+    font-style: normal;
+}
+.panel-filtros { display: flex; flex-direction: column; gap: 14px; padding: 14px; border-radius: 16px; background: var(--superficie-2); animation: aparecerSuave 0.2s ease-out; }
+.filtro-grupo { display: flex; flex-direction: column; gap: 7px; }
+.filtro-titulo { font-size: 12px; font-weight: 700; color: var(--texto-secundario); }
+.chips-filtro { gap: 6px; }
+.chips-filtro button { height: 32px; padding: 0 12px; font-size: 12px; }
+.panel-filtros .enlace { align-self: flex-start; font-size: 13px; font-weight: 600; }
 @media (max-width: 560px) { .lista-movimientos-modal { padding: 0 16px 16px; } }
 
 /* Leyenda de los gráficos: sin recuadro al tocar una categoría (el gráfico ya atenúa las demás) */

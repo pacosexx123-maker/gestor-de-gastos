@@ -4,7 +4,7 @@
 //
 // localStorage 'bloqueo' = { sal, hash, iteraciones, credencial, minutos }
 
-import { bytesABase64, base64ABytes } from './excel.js?v=31';
+import { bytesABase64, base64ABytes } from './excel.js?v=32';
 
 const ITERACIONES = 150000;
 const $ = id => document.getElementById(id);

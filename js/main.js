@@ -1,29 +1,29 @@
 // Arranque de la app: navegación entre pestañas, avisos, ventanas, menú de datos
 // (exportar, copia de seguridad e importar) y conexión entre los módulos.
 
-import { obtenerFechaHoy, descargarArchivo, formatoFechaES } from './utils.js?v=31';
-import { bytesABase64, MIME_EXCEL } from './excel.js?v=31';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=31';
+import { obtenerFechaHoy, descargarArchivo, formatoFechaES } from './utils.js?v=32';
+import { bytesABase64, MIME_EXCEL } from './excel.js?v=32';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=32';
 import {
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, reemplazarInversiones,
     generarExcelInversiones, anadirInversiones, obtenerHistoricoValor, reemplazarHistoricoValor
-} from './inversiones.js?v=31';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo, leerFilasArchivo, sonOrdenesDeBroker } from './importar-ordenes.js?v=31';
-import { iniciarImportacionBanco, importarBancoDesdeFilas } from './importar-banco.js?v=31';
-import { obtenerReglas, reemplazarReglas } from './reglas.js?v=31';
-import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=31';
-import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=31';
-import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=31';
-import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=31';
+} from './inversiones.js?v=32';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo, leerFilasArchivo, sonOrdenesDeBroker } from './importar-ordenes.js?v=32';
+import { iniciarImportacionBanco, importarBancoDesdeFilas } from './importar-banco.js?v=32';
+import { obtenerReglas, reemplazarReglas } from './reglas.js?v=32';
+import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=32';
+import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=32';
+import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=32';
+import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=32';
 import {
     iniciarGastos, abrirFormularioGasto, obtenerMovimientos, reemplazarMovimientos, anadirMovimientos,
     generarExcelGastos, renombrarCategoriaEnMovimientos, quitarApartadoDeMovimientos,
     obtenerPresupuestos, reemplazarPresupuestos, renderizarGastos
-} from './gastos.js?v=31';
-import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=31';
-import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=31';
-import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=31';
-import { iniciarBloqueo } from './bloqueo.js?v=31';
+} from './gastos.js?v=32';
+import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=32';
+import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=32';
+import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=32';
+import { iniciarBloqueo } from './bloqueo.js?v=32';
 
 // --- AVISOS (con opción de deshacer) ---
 
@@ -182,7 +182,7 @@ document.addEventListener('touchstart', e => {
     inicioToque = null;
     if (e.touches.length !== 1 || document.body.classList.contains('body-fijo') || document.documentElement.classList.contains('bloqueada')) return;
     const objetivo = e.target;
-    if (objetivo.closest('#zona-swipe-mes, input, select, textarea')) return;
+    if (objetivo.closest('#zona-swipe-mes, input, select, textarea, .mov')) return; // en un movimiento, deslizar muestra sus opciones
     const tabla = objetivo.closest('.tabla-contenedor');
     if (tabla && tabla.scrollWidth > tabla.clientWidth) return; // tabla que se desplaza de lado
     inicioToque = { x: e.touches[0].clientX, y: e.touches[0].clientY, tiempo: Date.now() };

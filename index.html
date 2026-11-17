@@ -19,8 +19,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=31">
-    <link rel="manifest" href="manifest.json?v=31">
+    <link rel="stylesheet" href="css/style.css?v=32">
+    <link rel="manifest" href="manifest.json?v=32">
 </head>
 <body>
 
@@ -176,14 +176,41 @@
             </div>
             <div id="contenedor-acordeon" class="acordeon-contenido abierto">
                 <div class="acordeon-interior">
-                    <div class="filtros-operaciones filtros-movimientos">
-                        <div class="filtro-busqueda">
-                            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                            <input type="search" id="filtro-mov-texto" placeholder="Buscar concepto o nota" autocomplete="off" aria-label="Buscar concepto o nota">
+                    <div class="filtros-historial">
+                        <div class="filtros-barra">
+                            <div class="filtro-busqueda">
+                                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                <input type="search" id="filtro-mov-texto" placeholder="Buscar concepto o nota" autocomplete="off" aria-label="Buscar concepto o nota">
+                            </div>
+                            <button type="button" id="btn-filtros-mov" class="btn-filtros" aria-expanded="false" aria-controls="panel-filtros-mov">
+                                <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+                                <span>Filtros</span>
+                                <em id="num-filtros-mov" class="oculto">0</em>
+                            </button>
                         </div>
-                        <select id="filtro-mov-categoria" aria-label="Filtrar por categoría"></select>
-                        <select id="filtro-mov-ambito" aria-label="Filtrar por personal o apartado"></select>
-                        <label class="opcion-check filtro-todos"><input type="checkbox" id="filtro-mov-todos"><span>Todos los meses</span></label>
+                        <div id="panel-filtros-mov" class="panel-filtros oculto">
+                            <div class="filtro-grupo">
+                                <span class="filtro-titulo">Periodo</span>
+                                <select id="filtro-mov-periodo" class="select-oculto" tabindex="-1" aria-hidden="true"><option value="">Este mes</option><option value="todos">Todos los meses</option></select>
+                                <div class="chips chips-filtro" id="chips-filtro-periodo" role="group" aria-label="Periodo"></div>
+                            </div>
+                            <div class="filtro-grupo">
+                                <span class="filtro-titulo">Tipo</span>
+                                <select id="filtro-mov-tipo" class="select-oculto" tabindex="-1" aria-hidden="true"><option value="">Todo</option><option value="gasto">Gastos</option><option value="ingreso">Ingresos</option></select>
+                                <div class="chips chips-filtro" id="chips-filtro-tipo" role="group" aria-label="Tipo"></div>
+                            </div>
+                            <div class="filtro-grupo">
+                                <span class="filtro-titulo">Dónde</span>
+                                <select id="filtro-mov-ambito" class="select-oculto" tabindex="-1" aria-hidden="true"></select>
+                                <div class="chips chips-filtro" id="chips-filtro-ambito" role="group" aria-label="Personal o apartado"></div>
+                            </div>
+                            <div class="filtro-grupo">
+                                <span class="filtro-titulo">Categoría</span>
+                                <select id="filtro-mov-categoria" class="select-oculto" tabindex="-1" aria-hidden="true"></select>
+                                <div class="chips chips-filtro" id="chips-filtro-categoria" role="group" aria-label="Categoría"></div>
+                            </div>
+                            <button type="button" id="btn-quitar-filtros-mov" class="enlace oculto">Quitar filtros</button>
+                        </div>
                     </div>
                     <div id="lista-gastos" class="lista-movimientos"></div>
                 </div>
@@ -1096,6 +1123,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=31"></script>
+    <script type="module" src="js/main.js?v=32"></script>
 </body>
 </html>
