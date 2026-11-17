@@ -2,17 +2,17 @@
 // (gastos que van aparte, como "Hogar"), gráficos, historial con filtros,
 // formulario (con notas y repetición mensual), duplicar y deshacer.
 
-import { leerDato, guardarDato } from './datos.js?v=31';
+import { leerDato, guardarDato } from './datos.js?v=32';
 import {
     obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesCorto, nombreMesLargo, formatoFechaES,
     formatoNumero, formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=31';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=31';
-import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=31';
-import { crearRecurrente } from './recurrentes.js?v=31';
-import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=31';
-import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=31';
-import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=31';
+} from './utils.js?v=32';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=32';
+import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=32';
+import { crearRecurrente } from './recurrentes.js?v=32';
+import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=32';
+import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=32';
+import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=32';
 
 const ICONO = {
     editar: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
@@ -281,13 +281,17 @@ function etiquetaDia(fecha, conMes) {
     return `${texto} ${nombreMesCorto(fecha.substring(0, 7)).toLowerCase()}${anio !== new Date().getFullYear() ? ` ${anio}` : ''}`;
 }
 
-// Un movimiento: al tocarlo aparecen sus acciones (editar, duplicar, eliminar)
+// Un movimiento: deslizándolo hacia la izquierda aparecen "Editar" y "Eliminar" (tocarlo también lo edita)
 function filaMovimiento(m, indice) {
     const apartado = m.apartado ? apartadoPorId(m.apartado) : null;
     const categoria = !apartado || (m.categoria && m.categoria !== apartado.nombre) ? escaparHTML(m.categoria || 'Otros') : '';
     return `
-        <div class="mov">
-            <button type="button" class="mov-fila" aria-expanded="false">
+        <div class="mov" data-indice="${indice}">
+            <div class="mov-acciones">
+                <button type="button" class="mov-accion mov-accion-editar" data-accion="editar" data-indice="${indice}" tabindex="-1">${ICONO.editar}<span>Editar</span></button>
+                <button type="button" class="mov-accion mov-accion-eliminar" data-accion="eliminar" data-indice="${indice}" tabindex="-1">${ICONO.eliminar}<span>Eliminar</span></button>
+            </div>
+            <button type="button" class="mov-fila" title="Editar (desliza a la izquierda para ver más opciones)">
                 <span class="mov-punto" style="background:${colorMovimiento(m)}"></span>
                 <span class="mov-texto">
                     <b>${escaparHTML(m.concepto || 'Sin concepto')}</b>
@@ -296,11 +300,6 @@ function filaMovimiento(m, indice) {
                 </span>
                 <span class="mov-importe ${esIngreso(m) ? 'monto-positivo' : ''}">${esIngreso(m) ? '+' : '−'}${formatoEuros(importe(m))}</span>
             </button>
-            <div class="mov-acciones">
-                <button type="button" class="btn-secundario btn-mini" data-accion="editar" data-indice="${indice}">${ICONO.editar} Editar</button>
-                <button type="button" class="btn-secundario btn-mini" data-accion="duplicar" data-indice="${indice}">${ICONO.duplicar} Duplicar</button>
-                <button type="button" class="btn-secundario btn-mini btn-peligro" data-accion="eliminar" data-indice="${indice}">${ICONO.eliminar} Eliminar</button>
-            </div>
         </div>`;
 }
 
@@ -320,21 +319,88 @@ function listaPorDias(filas, conMes) {
     return dia === null ? html : `${html}</div>`;
 }
 
+// --- DESLIZAR UN MOVIMIENTO ---
+
+const ANCHO_ACCIONES = 152; // dos botones de 76 px
+
+function moverFila(mov, desplazamiento, conTransicion) {
+    const fila = mov.querySelector('.mov-fila');
+    fila.style.transition = conTransicion ? '' : 'none';
+    fila.style.transform = desplazamiento ? `translateX(${desplazamiento}px)` : '';
+    // Los botones aparecen poco a poco según se desliza (0 = ocultos, 1 = del todo)
+    mov.style.setProperty('--progreso', Math.min(1, -desplazamiento / ANCHO_ACCIONES).toFixed(3));
+}
+
+function abrirFila(mov) {
+    mov.classList.add('abierto');
+    mov.querySelectorAll('.mov-accion').forEach(b => b.removeAttribute('tabindex'));
+    moverFila(mov, -ANCHO_ACCIONES, true);
+}
+
+function cerrarFila(mov) {
+    mov.classList.remove('abierto');
+    mov.querySelectorAll('.mov-accion').forEach(b => b.setAttribute('tabindex', '-1'));
+    moverFila(mov, 0, true);
+}
+
+function cerrarFilasAbiertas(excepto) {
+    document.querySelectorAll('.mov.abierto').forEach(mov => { if (mov !== excepto) cerrarFila(mov); });
+}
+
+function conectarDeslizar(mov) {
+    const fila = mov.querySelector('.mov-fila');
+    let gesto = null; // { x, y, inicio, desplazamiento, horizontal }
+    let ignorarClic = false;
+
+    fila.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        gesto = { x: e.clientX, y: e.clientY, inicio: mov.classList.contains('abierto') ? -ANCHO_ACCIONES : 0, desplazamiento: 0, horizontal: null, id: e.pointerId };
+    });
+    fila.addEventListener('pointermove', e => {
+        if (!gesto || e.pointerId !== gesto.id) return;
+        const dx = e.clientX - gesto.x;
+        const dy = e.clientY - gesto.y;
+        if (gesto.horizontal === null) {
+            if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+            gesto.horizontal = Math.abs(dx) > Math.abs(dy);
+            if (!gesto.horizontal) { gesto = null; return; } // es un scroll vertical
+            cerrarFilasAbiertas(mov);
+            try { fila.setPointerCapture(e.pointerId); } catch (error) { /* sin captura */ }
+        }
+        // Hacia la izquierda hasta el ancho de los botones (y un poco más, frenando); hacia la derecha, nada
+        let x = gesto.inicio + dx;
+        if (x < -ANCHO_ACCIONES) x = -ANCHO_ACCIONES + (x + ANCHO_ACCIONES) * 0.3;
+        gesto.desplazamiento = Math.min(0, x);
+        moverFila(mov, gesto.desplazamiento, false);
+    });
+    const terminar = () => {
+        if (!gesto) return;
+        if (gesto.horizontal) {
+            ignorarClic = true; // el navegador manda un clic al soltar: no debe abrir el formulario
+            setTimeout(() => { ignorarClic = false; }, 50);
+            if (gesto.desplazamiento < -ANCHO_ACCIONES / 2.5) abrirFila(mov); else cerrarFila(mov);
+        }
+        gesto = null;
+    };
+    fila.addEventListener('pointerup', terminar);
+    fila.addEventListener('pointercancel', terminar);
+
+    // Tocar: si está abierta se cierra; si no, se edita
+    fila.addEventListener('click', () => {
+        if (ignorarClic) return;
+        if (mov.classList.contains('abierto')) { cerrarFila(mov); return; }
+        cerrarFilasAbiertas();
+        ayudas.cerrarModal(modalDetalle);
+        abrirFormularioGasto({ indice: Number(mov.getAttribute('data-indice')) });
+    });
+}
+
 function conectarAcciones(contenedor) {
-    contenedor.querySelectorAll('.mov-fila').forEach(fila => fila.addEventListener('click', () => {
-        const abrir = !fila.parentElement.classList.contains('abierto');
-        contenedor.querySelectorAll('.mov.abierto').forEach(otro => {
-            otro.classList.remove('abierto');
-            otro.querySelector('.mov-fila').setAttribute('aria-expanded', 'false');
-        });
-        fila.parentElement.classList.toggle('abierto', abrir);
-        fila.setAttribute('aria-expanded', String(abrir));
-    }));
+    contenedor.querySelectorAll('.mov').forEach(conectarDeslizar);
     contenedor.querySelectorAll('[data-accion]').forEach(btn => btn.addEventListener('click', () => {
         const indice = Number(btn.getAttribute('data-indice'));
         const accion = btn.getAttribute('data-accion');
         if (accion === 'editar') { ayudas.cerrarModal(modalDetalle); abrirFormularioGasto({ indice }); }
-        if (accion === 'duplicar') { ayudas.cerrarModal(modalDetalle); abrirFormularioGasto({ plantilla: movimientos[indice] }); }
         if (accion === 'eliminar') eliminarMovimiento(indice);
     }));
 }
@@ -343,24 +409,47 @@ function rellenarFiltros() {
     const selectCat = $('filtro-mov-categoria');
     const actual = selectCat.value;
     const nombres = [...new Set([...obtenerCategorias('gasto'), ...obtenerCategorias('ingreso'), ...movimientos.map(m => m.categoria).filter(Boolean)])];
-    selectCat.innerHTML = '<option value="">Todas las categorías</option>' + nombres.map(c => `<option value="${escaparHTML(c)}">${escaparHTML(c)}</option>`).join('');
+    selectCat.innerHTML = '<option value="">Todas</option>' + nombres.map(c => `<option value="${escaparHTML(c)}">${escaparHTML(c)}</option>`).join('');
     selectCat.value = nombres.includes(actual) ? actual : '';
 
     const selectAmbito = $('filtro-mov-ambito');
     const ambito = selectAmbito.value;
-    selectAmbito.innerHTML = '<option value="">Personal y apartados</option><option value="personal">Solo personal</option>' +
+    selectAmbito.innerHTML = '<option value="">Todo</option><option value="personal">Personal</option>' +
         obtenerApartados().map(a => `<option value="${a.id}">${escaparHTML(a.nombre)}</option>`).join('');
     selectAmbito.value = [...selectAmbito.options].some(o => o.value === ambito) ? ambito : '';
+    pintarFiltros();
+}
+
+// Botones del panel de filtros (los <select> ocultos guardan el valor)
+const FILTROS_MOV = ['filtro-mov-periodo', 'filtro-mov-tipo', 'filtro-mov-ambito', 'filtro-mov-categoria'];
+const pintoresFiltros = [
+    chipsDesdeSelect($('filtro-mov-periodo'), $('chips-filtro-periodo')),
+    chipsDesdeSelect($('filtro-mov-tipo'), $('chips-filtro-tipo')),
+    chipsDesdeSelect($('filtro-mov-ambito'), $('chips-filtro-ambito')),
+    chipsDesdeSelect($('filtro-mov-categoria'), $('chips-filtro-categoria'), {
+        color: valor => !valor ? null : obtenerCategorias('ingreso').includes(valor) && !obtenerCategorias('gasto').includes(valor) ? 'var(--ingreso)' : colorSerieCategoria(valor)
+    })
+];
+
+function pintarFiltros() {
+    pintoresFiltros.forEach(pintar => pintar());
+    const activos = FILTROS_MOV.filter(id => $(id).value).length;
+    const contador = $('num-filtros-mov');
+    contador.textContent = activos;
+    contador.classList.toggle('oculto', activos === 0);
+    $('btn-quitar-filtros-mov').classList.toggle('oculto', activos === 0);
 }
 
 function renderizarHistorial(mes) {
     const texto = $('filtro-mov-texto').value.trim().toLowerCase();
     const categoria = $('filtro-mov-categoria').value;
     const ambito = $('filtro-mov-ambito').value;
-    const todos = $('filtro-mov-todos').checked;
+    const tipo = $('filtro-mov-tipo').value;
+    const todos = $('filtro-mov-periodo').value === 'todos';
 
     const base = movimientos.map((m, indice) => ({ m, indice })).filter(({ m }) => todos || mesDe(m) === mes);
     const filtrados = base.filter(({ m }) => {
+        if (tipo && (tipo === 'ingreso') !== esIngreso(m)) return false;
         if (categoria && m.categoria !== categoria) return false;
         if (ambito === 'personal' && m.apartado) return false;
         if (ambito && ambito !== 'personal' && m.apartado !== ambito) return false;
@@ -956,8 +1045,21 @@ export function iniciarGastos(funcionesAyuda) {
     });
 
     // Filtros del historial
-    ['filtro-mov-texto'].forEach(id => $(id).addEventListener('input', () => renderizarHistorial(inputMes.value)));
-    ['filtro-mov-categoria', 'filtro-mov-ambito', 'filtro-mov-todos'].forEach(id => $(id).addEventListener('change', () => renderizarHistorial(inputMes.value)));
+    $('filtro-mov-texto').addEventListener('input', () => renderizarHistorial(inputMes.value));
+    FILTROS_MOV.forEach(id => $(id).addEventListener('change', () => { pintarFiltros(); renderizarHistorial(inputMes.value); }));
+    $('btn-filtros-mov').addEventListener('click', () => {
+        const abierto = $('panel-filtros-mov').classList.toggle('oculto') === false;
+        $('btn-filtros-mov').classList.toggle('activo', abierto);
+        $('btn-filtros-mov').setAttribute('aria-expanded', String(abierto));
+    });
+    $('btn-quitar-filtros-mov').addEventListener('click', () => {
+        FILTROS_MOV.forEach(id => { $(id).value = ''; });
+        pintarFiltros();
+        renderizarHistorial(inputMes.value);
+    });
+
+    // Tocar fuera de un movimiento deslizado lo cierra
+    document.addEventListener('pointerdown', e => { if (!e.target.closest('.mov.abierto')) cerrarFilasAbiertas(); });
 
     // Análisis
     document.querySelectorAll('#selector-analisis button').forEach(btn => btn.addEventListener('click', () => {

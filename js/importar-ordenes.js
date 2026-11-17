@@ -2,11 +2,11 @@
 // Columnas reconocidas: Fecha de la orden, ISIN, Importe, Nº de participaciones, Estado
 // (y opcionalmente Nombre/Fondo y Precio/Valor liquidativo).
 
-import { leerPrimeraHojaExcel, excelAFecha } from './excel.js?v=31';
-import { formatoEuros, tieneDetalleTitulos, formatoFechaES, esVenta } from './utils.js?v=31';
+import { leerPrimeraHojaExcel, excelAFecha } from './excel.js?v=32';
+import { formatoEuros, tieneDetalleTitulos, formatoFechaES, esVenta } from './utils.js?v=32';
 import {
     obtenerInversiones, anadirInversiones, eliminarInversiones, buscarActivo, normalizarIsin, escaparHTML, formatoDecimal
-} from './inversiones.js?v=31';
+} from './inversiones.js?v=32';
 
 const modalImportar = document.getElementById('modal-importar-ordenes');
 const listaOrdenes = document.getElementById('lista-ordenes-importar');
