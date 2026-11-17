@@ -2045,6 +2045,51 @@ input:focus, select:focus, textarea:focus {
 .selector-fecha input.activo { border-color: var(--primario); box-shadow: inset 0 0 0 1px var(--primario); }
 .grupo-input > .chips + .texto-ayuda-form { margin: 8px 0 0; }
 
+/* Punto de color de la categoría en los botones del formulario */
+.chips button { display: inline-flex; align-items: center; gap: 7px; }
+.chip-punto { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.chips button.activo .chip-punto { box-shadow: 0 0 0 2px var(--primario-texto); }
+
+/* Historial y desglose: lista agrupada por día; al tocar un movimiento aparecen sus acciones */
+.lista-movimientos { display: flex; flex-direction: column; }
+.lista-movimientos > .estado-vacio { padding: 28px 0 !important; }
+.mov-dia-titulo {
+    margin: 18px 0 2px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--texto-secundario);
+}
+.mov-dia:first-child .mov-dia-titulo { margin-top: 8px; }
+.mov { border-bottom: 1px solid var(--borde); }
+.mov-dia .mov:last-child { border-bottom: 0; }
+.mov-fila {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 11px 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.mov-fila:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; border-radius: 6px; }
+.mov-punto { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.mov-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mov-texto b { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.mov-texto small { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 12px; color: var(--texto-terciario); }
+.mov-texto .pildora { padding: 1px 8px; font-size: 11px; }
+.mov-texto .nota-movimiento { display: block; margin: 0; }
+.mov-importe { flex-shrink: 0; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mov-acciones { display: none; flex-wrap: wrap; gap: 8px; padding: 0 0 12px 21px; }
+.mov.abierto .mov-acciones { display: flex; animation: aparecerSuave 0.2s ease-out; }
+.mov.abierto .mov-fila .mov-texto b { font-weight: 700; }
+.mov-acciones svg { width: 14px; height: 14px; }
+.lista-movimientos-modal { padding: 0 24px 16px; }
+@media (max-width: 560px) { .lista-movimientos-modal { padding: 0 16px 16px; } }
+
 /* Leyenda de los gráficos: sin recuadro al tocar una categoría (el gráfico ya atenúa las demás) */
 .leyenda-grafico li:hover, .leyenda-grafico li.resaltado { background: transparent; }
 .leyenda-grafico li:focus, .grafico [data-i]:focus, .grafico svg:focus, .grafico svg *:focus { outline: none; }

@@ -2,17 +2,17 @@
 // (gastos que van aparte, como "Hogar"), gráficos, historial con filtros,
 // formulario (con notas y repetición mensual), duplicar y deshacer.
 
-import { leerDato, guardarDato } from './datos.js?v=30';
+import { leerDato, guardarDato } from './datos.js?v=31';
 import {
     obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesCorto, nombreMesLargo, formatoFechaES,
     formatoNumero, formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=30';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=30';
-import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=30';
-import { crearRecurrente } from './recurrentes.js?v=30';
-import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=30';
-import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=30';
-import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=30';
+} from './utils.js?v=31';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=31';
+import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=31';
+import { crearRecurrente } from './recurrentes.js?v=31';
+import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=31';
+import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=31';
+import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=31';
 
 const ICONO = {
     editar: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
@@ -45,7 +45,10 @@ const checkRecurrente = $('mov-recurrente');
 
 // Botones del formulario (los <select> siguen guardando el valor, ocultos)
 const pintarTipo = chipsDesdeSelect(selectTipo, $('selector-tipo'));
-const pintarCategorias = chipsDesdeSelect(selectCategoria, $('chips-categoria'));
+const pintarCategorias = chipsDesdeSelect(selectCategoria, $('chips-categoria'), {
+    // Punto de color en las categorías de gasto (el mismo que en el gráfico)
+    color: valor => selectTipo.value !== 'ingreso' && valor !== '__nueva__' ? colorSerieCategoria(valor) : null
+});
 const pintarApartados = chipsDesdeSelect(selectApartado, $('chips-apartado'));
 const pintarFecha = atajosFecha(inputFecha, $('atajos-fecha'));
 
@@ -211,15 +214,11 @@ function renderizarBalance(mes, ingresos, gastos) {
     cifra.innerHTML = `${escaparHTML(texto.substring(0, coma).replace('-', '−'))}<span>${escaparHTML(texto.substring(coma))} €</span>`;
     cifra.classList.toggle('negativo', balance < 0);
 
-    const orden = obtenerCategorias('gasto');
     const base = Math.max(ingresos, gastos);
     $('balance-barra').innerHTML = base > 0 ? Object.entries(gastoPorCategoria(mes))
         .sort((a, b) => b[1] - a[1])
-        .map(([nombre, valor]) => {
-            const indice = orden.indexOf(nombre);
-            const color = indice >= 0 && indice < 8 ? `var(--serie-${indice + 1})` : 'var(--serie-otros)';
-            return `<i style="width:${(valor / base) * 100}%;background:${color}" title="${escaparHTML(nombre)}"></i>`;
-        }).join('') : '';
+        .map(([nombre, valor]) => `<i style="width:${(valor / base) * 100}%;background:${colorSerieCategoria(nombre)}" title="${escaparHTML(nombre)}"></i>`)
+        .join('') : '';
 
     $('balance-texto').textContent = ingresos > 0
         ? `Has gastado el ${formatoPorcentaje((gastos / ingresos) * 100, 0)} de tus ingresos del mes`
@@ -244,12 +243,8 @@ function renderizarAnalisis(mes) {
             return;
         }
         // El color sigue a la categoría (su posición en la lista de categorías), no a su importe
-        const orden = obtenerCategorias('gasto');
         const elementos = agruparOtros(Object.entries(totales)
-            .map(([nombre, valor]) => {
-                const indice = orden.indexOf(nombre);
-                return { nombre, total: valor, porcentaje: (valor / total) * 100, color: indice >= 0 && indice < 8 ? `var(--serie-${indice + 1})` : 'var(--serie-otros)' };
-            })
+            .map(([nombre, valor]) => ({ nombre, total: valor, porcentaje: (valor / total) * 100, color: colorSerieCategoria(nombre) }))
             .sort((a, b) => b.total - a.total));
         contenedor.innerHTML = dibujarTarta(elementos, total, escaparHTML, ['categoría', 'categorías']);
         conectarInteraccion(contenedor, elementos);
@@ -268,42 +263,73 @@ function renderizarAnalisis(mes) {
 
 // --- HISTORIAL CON FILTROS ---
 
-function pildoras(m) {
-    const apartado = m.apartado ? apartadoPorId(m.apartado) : null;
-    let html = '';
-    if (!apartado || (m.categoria && m.categoria !== apartado.nombre)) html += `<span class="pildora">${escaparHTML(m.categoria || 'Otros')}</span>`;
-    if (apartado) html += `<span class="pildora pildora-apartado">${escaparHTML(apartado.nombre)}</span>`;
-    if (m.recurrenteId) html += `<span class="pildora pildora-recurrente" title="Se repite cada mes">${ICONO.repetir}</span>`;
-    return html;
+// Color de una categoría de gasto: el mismo que en el gráfico de Análisis
+function colorSerieCategoria(nombre) {
+    const indice = obtenerCategorias('gasto').indexOf(nombre);
+    return indice >= 0 && indice < 8 ? `var(--serie-${indice + 1})` : 'var(--serie-otros)';
 }
 
-function botonesAcciones(indice) {
+const colorMovimiento = m => esIngreso(m) ? 'var(--ingreso)' : colorSerieCategoria(m.categoria || 'Otros');
+
+const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+// "Lun 16" o, si la lista abarca varios meses, "Lun 16 nov" (con el año si no es el actual)
+function etiquetaDia(fecha, conMes) {
+    const [anio, mes, dia] = fecha.split('-').map(Number);
+    const texto = `${DIAS_SEMANA[new Date(anio, mes - 1, dia).getDay()]} ${dia}`;
+    if (!conMes) return texto;
+    return `${texto} ${nombreMesCorto(fecha.substring(0, 7)).toLowerCase()}${anio !== new Date().getFullYear() ? ` ${anio}` : ''}`;
+}
+
+// Un movimiento: al tocarlo aparecen sus acciones (editar, duplicar, eliminar)
+function filaMovimiento(m, indice) {
+    const apartado = m.apartado ? apartadoPorId(m.apartado) : null;
+    const categoria = !apartado || (m.categoria && m.categoria !== apartado.nombre) ? escaparHTML(m.categoria || 'Otros') : '';
     return `
-        <div class="acciones-fila acciones-tres">
-            <button class="btn-editar" data-accion="duplicar" data-indice="${indice}" title="Duplicar">${ICONO.duplicar}</button>
-            <button class="btn-editar" data-accion="editar" data-indice="${indice}" title="Editar">${ICONO.editar}</button>
-            <button class="btn-eliminar" data-accion="eliminar" data-indice="${indice}" title="Eliminar">${ICONO.eliminar}</button>
+        <div class="mov">
+            <button type="button" class="mov-fila" aria-expanded="false">
+                <span class="mov-punto" style="background:${colorMovimiento(m)}"></span>
+                <span class="mov-texto">
+                    <b>${escaparHTML(m.concepto || 'Sin concepto')}</b>
+                    <small>${categoria}${apartado ? `<span class="pildora pildora-apartado">${escaparHTML(apartado.nombre)}</span>` : ''}${m.recurrenteId ? `<span class="pildora pildora-recurrente" title="Se repite cada mes">${ICONO.repetir}</span>` : ''}</small>
+                    ${m.nota ? `<small class="nota-movimiento">${escaparHTML(m.nota)}</small>` : ''}
+                </span>
+                <span class="mov-importe ${esIngreso(m) ? 'monto-positivo' : ''}">${esIngreso(m) ? '+' : '−'}${formatoEuros(importe(m))}</span>
+            </button>
+            <div class="mov-acciones">
+                <button type="button" class="btn-secundario btn-mini" data-accion="editar" data-indice="${indice}">${ICONO.editar} Editar</button>
+                <button type="button" class="btn-secundario btn-mini" data-accion="duplicar" data-indice="${indice}">${ICONO.duplicar} Duplicar</button>
+                <button type="button" class="btn-secundario btn-mini btn-peligro" data-accion="eliminar" data-indice="${indice}">${ICONO.eliminar} Eliminar</button>
+            </div>
         </div>`;
 }
 
-function filaMovimiento(m, indice, fechaCorta) {
-    const signo = esIngreso(m) ? '+' : '−';
-    const fecha = formatoFechaES(m.fecha || obtenerFechaHoy());
-    return `
-        <tr>
-            <td>${fechaCorta ? fecha.substring(0, 5) : `${fecha.substring(0, 6)}${fecha.substring(8)}`}</td>
-            <td>
-                ${escaparHTML(m.concepto || 'Sin concepto')}
-                ${m.nota ? `<small class="nota-movimiento">${escaparHTML(m.nota)}</small>` : ''}
-                <span class="pildoras-movil">${pildoras(m)}</span>
-            </td>
-            <td><span class="pildoras">${pildoras(m)}</span></td>
-            <td class="${esIngreso(m) ? 'monto-positivo' : 'monto-negativo'}">${signo} ${formatoEuros(importe(m))}</td>
-            <td>${botonesAcciones(indice)}</td>
-        </tr>`;
+// filas: [{ m, indice }] ya ordenadas de la más reciente a la más antigua
+function listaPorDias(filas, conMes) {
+    let html = '';
+    let dia = null;
+    filas.forEach(({ m, indice }) => {
+        const fecha = m.fecha || obtenerFechaHoy();
+        if (fecha !== dia) {
+            if (dia !== null) html += '</div>';
+            dia = fecha;
+            html += `<div class="mov-dia"><h4 class="mov-dia-titulo">${etiquetaDia(fecha, conMes)}</h4>`;
+        }
+        html += filaMovimiento(m, indice);
+    });
+    return dia === null ? html : `${html}</div>`;
 }
 
 function conectarAcciones(contenedor) {
+    contenedor.querySelectorAll('.mov-fila').forEach(fila => fila.addEventListener('click', () => {
+        const abrir = !fila.parentElement.classList.contains('abierto');
+        contenedor.querySelectorAll('.mov.abierto').forEach(otro => {
+            otro.classList.remove('abierto');
+            otro.querySelector('.mov-fila').setAttribute('aria-expanded', 'false');
+        });
+        fila.parentElement.classList.toggle('abierto', abrir);
+        fila.setAttribute('aria-expanded', String(abrir));
+    }));
     contenedor.querySelectorAll('[data-accion]').forEach(btn => btn.addEventListener('click', () => {
         const indice = Number(btn.getAttribute('data-indice'));
         const accion = btn.getAttribute('data-accion');
@@ -346,11 +372,11 @@ function renderizarHistorial(mes) {
     const textoTotal = `${n} ${n === 1 ? 'movimiento' : 'movimientos'}${todos ? ' en total' : ' este mes'}`;
     $('resumen-historial').textContent = filtrados.length === n ? textoTotal : `${filtrados.length} de ${textoTotal}`;
 
-    const tabla = $('lista-gastos');
-    tabla.innerHTML = filtrados.length
-        ? filtrados.map(({ m, indice }) => filaMovimiento(m, indice, !todos)).join('')
-        : `<tr><td colspan="5" class="estado-vacio">${n === 0 ? 'No hay movimientos' : 'Ningún movimiento coincide con el filtro'}</td></tr>`;
-    conectarAcciones(tabla);
+    const lista = $('lista-gastos');
+    lista.innerHTML = filtrados.length
+        ? listaPorDias(filtrados, todos)
+        : `<p class="estado-vacio">${n === 0 ? 'No hay movimientos este mes' : 'Ningún movimiento coincide con el filtro'}</p>`;
+    conectarAcciones(lista);
 }
 
 // --- DETALLE (al pulsar una tarjeta) ---
@@ -380,18 +406,10 @@ function abrirDetalle(detalle) {
     $('titulo-modal-detalle').textContent = titulo;
     $('resumen-categorias').innerHTML = resumen.map(([nombre, valor]) => `<span class="resumen-badge">${escaparHTML(nombre)}: ${formatoEuros(valor)}</span>`).join('');
     const filas = lista.map(m => ({ m, indice: movimientos.indexOf(m) }))
-        .sort((a, b) => (b.m.fecha || '').localeCompare(a.m.fecha || ''));
+        .sort((a, b) => (b.m.fecha || '').localeCompare(a.m.fecha || '') || b.indice - a.indice);
+    const variosMeses = new Set(filas.map(({ m }) => mesDe(m))).size > 1;
     const cuerpo = $('lista-detalle');
-    cuerpo.innerHTML = filas.length ? filas.map(({ m, indice }) => {
-        const signo = esIngreso(m) ? '+' : '−';
-        return `
-            <tr>
-                <td>${formatoFechaES(m.fecha || obtenerFechaHoy())}</td>
-                <td>${pildoras(m)}<br><small>${escaparHTML(m.concepto || 'Sin concepto')}</small>${m.nota ? `<small class="nota-movimiento">${escaparHTML(m.nota)}</small>` : ''}</td>
-                <td class="${esIngreso(m) ? 'monto-positivo' : 'monto-negativo'}">${signo} ${formatoEuros(importe(m))}</td>
-                <td>${botonesAcciones(indice)}</td>
-            </tr>`;
-    }).join('') : '<tr><td colspan="4" class="estado-vacio">No hay movimientos</td></tr>';
+    cuerpo.innerHTML = filas.length ? listaPorDias(filas, variosMeses) : '<p class="estado-vacio">No hay movimientos</p>';
     conectarAcciones(cuerpo);
     ayudas.abrirModal(modalDetalle);
 }
