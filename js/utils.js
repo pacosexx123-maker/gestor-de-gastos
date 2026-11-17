@@ -35,6 +35,17 @@ export function nombreMesLargo(mes) {
     return `${MESES_LARGOS[Number(numero) - 1]} ${anio}`;
 }
 
+const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+// Título de un día en las listas: "Lun 16" o, si la lista abarca varios meses,
+// "Lun 16 nov" (con el año si no es el actual)
+export function etiquetaDia(fecha, conMes) {
+    const [anio, mes, dia] = fecha.split('-').map(Number);
+    const texto = `${DIAS_SEMANA[new Date(anio, mes - 1, dia).getDay()]} ${dia}`;
+    if (!conMes) return texto;
+    return `${texto} ${nombreMesCorto(fecha.substring(0, 7)).toLowerCase()}${anio !== new Date().getFullYear() ? ` ${anio}` : ''}`;
+}
+
 export function formatoFechaES(fecha) {
     if (!fecha) return '';
     const [anio, mes, dia] = fecha.split('-');

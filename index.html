@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <link rel="icon" type="image/png" href="icono.png?v=2">
-    <link rel="apple-touch-icon" href="icono.png?v=2">
+    <link rel="icon" type="image/png" href="icono.png?v=3">
+    <link rel="apple-touch-icon" href="icono.png?v=3">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
@@ -19,8 +19,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=33">
-    <link rel="manifest" href="manifest.json?v=33">
+    <link rel="stylesheet" href="css/style.css?v=34">
+    <link rel="manifest" href="manifest.json?v=34">
 </head>
 <body>
 
@@ -110,6 +110,7 @@
         <section class="balance-mes">
             <span class="balance-etiqueta">Balance personal del mes</span>
             <p class="balance-cifra" id="balance-cifra">0<span>,00 €</span></p>
+            <span class="balance-comparacion" id="balance-comparacion"></span>
             <div class="balance-barra" id="balance-barra" aria-hidden="true"></div>
             <span class="balance-texto" id="balance-texto"></span>
         </section>
@@ -328,39 +329,43 @@
                         <small id="resumen-operaciones">De la más reciente a la más antigua</small>
                     </div>
                 </div>
-                <svg id="icono-flecha-operaciones" class="icono-flecha" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg id="icono-flecha-operaciones" class="icono-flecha" viewBox="0 0 24 24" style="transform: rotate(180deg)"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div id="contenedor-operaciones" class="acordeon-contenido">
+            <div id="contenedor-operaciones" class="acordeon-contenido abierto">
               <div class="acordeon-interior">
-                <div class="filtros-operaciones">
-                    <div class="filtro-busqueda">
-                        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        <input type="search" id="filtro-inv-nombre" placeholder="Buscar por nombre o ISIN" autocomplete="off" aria-label="Buscar por nombre o ISIN">
+                <div class="filtros-historial">
+                    <div class="filtros-barra">
+                        <div class="filtro-busqueda">
+                            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="search" id="filtro-inv-nombre" placeholder="Buscar por nombre o ISIN" autocomplete="off" aria-label="Buscar por nombre o ISIN">
+                        </div>
+                        <button type="button" id="btn-filtros-inv" class="btn-filtros" aria-expanded="false" aria-controls="panel-filtros-inv">
+                            <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+                            <span>Filtros</span>
+                            <em id="num-filtros-inv" class="oculto">0</em>
+                        </button>
                     </div>
-                    <select id="filtro-inv-tipo" aria-label="Filtrar por tipo">
-                        <option value="">Todos los tipos</option>
-                        <option value="Fondo">Fondos</option>
-                        <option value="Acción">Acciones</option>
-                        <option value="ETF">ETF</option>
-                        <option value="Otro">Otros</option>
-                    </select>
+                    <div id="panel-filtros-inv" class="panel-filtros oculto">
+                        <div class="filtro-grupo">
+                            <span class="filtro-titulo">Operación</span>
+                            <select id="filtro-inv-operacion" class="select-oculto" tabindex="-1" aria-hidden="true"><option value="">Todas</option><option value="compra">Compras</option><option value="venta">Ventas</option></select>
+                            <div class="chips chips-filtro" id="chips-filtro-inv-operacion" role="group" aria-label="Compra o venta"></div>
+                        </div>
+                        <div class="filtro-grupo">
+                            <span class="filtro-titulo">Tipo</span>
+                            <select id="filtro-inv-tipo" class="select-oculto" tabindex="-1" aria-hidden="true">
+                                <option value="">Todos</option>
+                                <option value="Fondo">Fondos</option>
+                                <option value="Acción">Acciones</option>
+                                <option value="ETF">ETF</option>
+                                <option value="Otro">Otros</option>
+                            </select>
+                            <div class="chips chips-filtro" id="chips-filtro-inv-tipo" role="group" aria-label="Tipo de activo"></div>
+                        </div>
+                        <button type="button" id="btn-quitar-filtros-inv" class="enlace oculto">Quitar filtros</button>
+                    </div>
                 </div>
-                <div class="tabla-contenedor">
-                <table class="tabla tabla-inversiones">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Activo</th>
-                            <th class="col-cantidad col-ocultar-movil">Títulos</th>
-                            <th class="col-cantidad col-ocultar-movil">Precio</th>
-                            <th class="col-cantidad col-ocultar-movil">Comisión</th>
-                            <th class="col-cantidad">Total</th>
-                            <th class="col-acciones"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="lista-inversiones"></tbody>
-                </table>
-                </div>
+                <div id="lista-inversiones" class="lista-movimientos"></div>
               </div>
             </div>
         </section>
@@ -725,26 +730,31 @@
                     <button type="button" data-valor="compra">Compra</button>
                     <button type="button" data-valor="venta">Venta</button>
                 </div>
+                <!-- Total en grande, como la cantidad en el formulario de gastos (se calcula solo) -->
+                <div class="resumen-formulario total-grande">
+                    <span id="texto-total-formulario">Total pagado</span>
+                    <b><span id="inv-total-formulario">0,00</span><em>€</em></b>
+                    <small id="inv-desglose-formulario">0,00 € en títulos + 0,00 € de comisión</small>
+                </div>
                 <div class="grupo-input">
                     <label for="inv-nombre">Fondo / acción</label>
                     <input type="text" id="inv-nombre" list="lista-nombres-activos" placeholder="Ej. Vanguard Global Stock Index" autocomplete="off" required>
                     <datalist id="lista-nombres-activos"></datalist>
                 </div>
-                <div class="dos-columnas">
-                    <div class="grupo-input">
-                        <label for="inv-isin">ISIN</label>
-                        <input type="text" id="inv-isin" list="lista-isin-activos" placeholder="Ej. LU1598720172" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" pattern="[A-Z]{2}[A-Z0-9]{9}[0-9]" title="12 caracteres: 2 letras de país, 9 letras o números y 1 dígito (ej. LU1598720172)">
-                        <datalist id="lista-isin-activos"></datalist>
-                    </div>
-                    <div class="grupo-input">
-                        <label for="inv-tipo">Tipo</label>
-                        <select id="inv-tipo">
-                            <option value="Fondo">Fondo</option>
-                            <option value="Acción">Acción</option>
-                            <option value="ETF">ETF</option>
-                            <option value="Otro">Otro</option>
-                        </select>
-                    </div>
+                <div class="grupo-input">
+                    <label>Tipo</label>
+                    <select id="inv-tipo" class="select-oculto" tabindex="-1" aria-hidden="true">
+                        <option value="Fondo">Fondo</option>
+                        <option value="Acción">Acción</option>
+                        <option value="ETF">ETF</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                    <div class="chips" id="chips-inv-tipo" role="group" aria-label="Tipo de activo"></div>
+                </div>
+                <div class="grupo-input">
+                    <label for="inv-isin">ISIN <em class="opcional">(opcional)</em></label>
+                    <input type="text" id="inv-isin" list="lista-isin-activos" placeholder="Ej. LU1598720172" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" pattern="[A-Z]{2}[A-Z0-9]{9}[0-9]" title="12 caracteres: 2 letras de país, 9 letras o números y 1 dígito (ej. LU1598720172)">
+                    <datalist id="lista-isin-activos"></datalist>
                 </div>
                 <div class="grupo-input">
                     <label>¿Cómo quieres añadirla?</label>
@@ -787,13 +797,6 @@
                         <button type="button" data-dias="-1">Ayer</button>
                         <input type="date" id="inv-fecha" aria-label="Elegir otra fecha" required>
                     </div>
-                </div>
-                <div class="resumen-formulario">
-                    <div>
-                        <span id="texto-total-formulario">Total pagado</span>
-                        <small id="inv-desglose-formulario">0,00 € en títulos + 0,00 € de comisión</small>
-                    </div>
-                    <b><span id="inv-total-formulario">0,00</span> €</b>
                 </div>
                 <p id="inv-error-comision" class="texto-error oculto">El importe final no puede ser menor que títulos × precio.</p>
                 <label class="opcion-check" id="grupo-inv-recurrente">
@@ -1041,7 +1044,7 @@
     <!-- Pantalla de bloqueo -->
     <div id="pantalla-bloqueo" class="pantalla-bloqueo oculto" role="dialog" aria-label="App bloqueada">
         <div class="bloqueo-contenido">
-            <img src="icono.png?v=2" alt="" class="bloqueo-logo">
+            <img src="icono.png?v=3" alt="" class="bloqueo-logo">
             <b>Introduce tu PIN</b>
             <div id="bloqueo-puntos" class="bloqueo-puntos"></div>
             <p id="bloqueo-error" class="bloqueo-error"></p>
@@ -1123,6 +1126,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=33"></script>
+    <script type="module" src="js/main.js?v=34"></script>
 </body>
 </html>

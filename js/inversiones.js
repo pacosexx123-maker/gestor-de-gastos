@@ -3,22 +3,23 @@ import {
     calcularTotalInversion, calcularResumenPorActivo, calcularPosiciones, claveActivo, tieneDetalleTitulos, esVenta,
     formatoNumero, formatoEuros, formatoPorcentaje, formatoDecimalVariable, escaparHTML as escaparTexto, leerImporte,
     sumarMeses, formatoFechaES
-} from './utils.js?v=33';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=33';
-import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=33';
-import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros, dibujarLineas } from './graficos.js?v=33';
+} from './utils.js?v=34';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=34';
+import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=34';
+import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros, dibujarLineas } from './graficos.js?v=34';
 import {
     iniciarValoraciones, abrirValorActual, valorActual, precioActual,
     rentabilidad, formatoRentabilidad, claseRentabilidad
-} from './valoraciones.js?v=33';
-import { leerDato, guardarDato } from './datos.js?v=33';
-import { crearRecurrente } from './recurrentes.js?v=33';
-import { atajosFecha } from './selectores.js?v=33';
+} from './valoraciones.js?v=34';
+import { leerDato, guardarDato } from './datos.js?v=34';
+import { crearRecurrente } from './recurrentes.js?v=34';
+import { atajosFecha, chipsDesdeSelect } from './selectores.js?v=34';
+import { conectarFilasDeslizables } from './filas-deslizables.js?v=34';
+import { etiquetaDia } from './utils.js?v=34';
 
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICONO_DESPLEGAR = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
 const SERIES_DISPONIBLES = 8;
-const ICONO_DUPLICAR = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const ICONO_ELIMINAR = '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
 
 const modalInversion = document.getElementById('modal-inversion');
@@ -42,6 +43,22 @@ const errorComision = document.getElementById('inv-error-comision');
 const resumenOperaciones = document.getElementById('resumen-operaciones');
 const filtroNombre = document.getElementById('filtro-inv-nombre');
 const filtroTipo = document.getElementById('filtro-inv-tipo');
+const filtroOperacion = document.getElementById('filtro-inv-operacion');
+// Botones en lugar de desplegables (los <select> ocultos guardan el valor)
+const pintarTipoInversion = chipsDesdeSelect(selectTipo, document.getElementById('chips-inv-tipo'));
+const pintoresFiltrosOperaciones = [
+    chipsDesdeSelect(filtroOperacion, document.getElementById('chips-filtro-inv-operacion')),
+    chipsDesdeSelect(filtroTipo, document.getElementById('chips-filtro-inv-tipo'))
+];
+
+function pintarFiltrosOperaciones() {
+    pintoresFiltrosOperaciones.forEach(pintar => pintar());
+    const activos = [filtroOperacion, filtroTipo].filter(select => select.value).length;
+    const contador = document.getElementById('num-filtros-inv');
+    contador.textContent = activos;
+    contador.classList.toggle('oculto', activos === 0);
+    document.getElementById('btn-quitar-filtros-inv').classList.toggle('oculto', activos === 0);
+}
 const inputImporteSolo = document.getElementById('inv-importe-solo');
 const bloqueDetalle = document.getElementById('bloque-detalle-importe');
 const bloqueSoloImporte = document.getElementById('bloque-solo-importe');
@@ -255,6 +272,7 @@ export function abrirFormularioInversion(opciones = {}) {
     fijarModoImporte(origen && !tieneDetalleTitulos(origen) ? 'total' : 'detalle');
     fijarOperacion(origen && esVenta(origen) ? 'venta' : 'compra');
     pintarFecha();
+    pintarTipoInversion();
     ayudas.abrirModal(modalInversion);
 }
 
@@ -523,89 +541,101 @@ function rentabilidadOperacion(inv) {
 function coincideConFiltros(inv) {
     const texto = filtroNombre.value.trim().toLowerCase();
     const tipo = filtroTipo.value;
+    const operacionFiltro = filtroOperacion.value;
     if (tipo && (inv.tipo || 'Otro') !== tipo) return false;
+    if (operacionFiltro && (operacionFiltro === 'venta') !== esVenta(inv)) return false;
     if (!texto) return true;
     return String(inv.nombre || '').toLowerCase().includes(texto) || String(inv.isin || '').toLowerCase().includes(texto);
 }
 
-// Tabla de operaciones (más recientes primero), con filtros por nombre/ISIN y tipo
+// Una operación: como los movimientos de gastos, se desliza a la izquierda para editarla o
+// eliminarla, y tocarla la edita
+function filaOperacion(inv, indice, realizadoVenta) {
+    const conTitulos = tieneDetalleTitulos(inv);
+    const comision = parseFloat(inv.comision || 0);
+    const venta = esVenta(inv);
+    const detalle = conTitulos
+        ? `${formatoDecimal(inv.cantidad, 6)} × ${formatoDecimal(inv.precio, 4)} €${comision > 0 ? ` ${venta ? '−' : '+'} ${formatoEuros(comision)} com.` : ''}`
+        : venta ? 'Venta de toda la posición' : 'Solo importe';
+    const rentabilidadTexto = venta && realizadoVenta !== undefined
+        ? `<small class="rentabilidad-operacion rentabilidad-${realizadoVenta > 0.005 ? 'positiva' : realizadoVenta < -0.005 ? 'negativa' : 'neutra'}">${realizadoVenta >= 0 ? '+' : '−'}${formatoEuros(Math.abs(realizadoVenta))} realizado</small>`
+        : rentabilidadOperacion(inv);
+    return `
+        <div class="mov" data-indice="${indice}">
+            <div class="mov-acciones">
+                <button type="button" class="mov-accion mov-accion-editar" data-accion="editar" data-indice="${indice}" tabindex="-1">${ICONO_EDITAR}<span>Editar</span></button>
+                <button type="button" class="mov-accion mov-accion-eliminar" data-accion="eliminar" data-indice="${indice}" tabindex="-1">${ICONO_ELIMINAR}<span>Eliminar</span></button>
+            </div>
+            <button type="button" class="mov-fila" title="Editar (desliza a la izquierda para ver más opciones)">
+                <span class="mov-punto" style="background:${venta ? 'var(--ingreso)' : 'var(--inversion)'}"></span>
+                <span class="mov-texto">
+                    <b>${escaparHTML(inv.nombre || 'Sin nombre')}</b>
+                    <small>
+                        ${venta ? '<span class="pildora pildora-venta">Venta</span>' : ''}
+                        <span class="pildora">${escaparHTML(inv.tipo || 'Otro')}</span>
+                        ${inv.recurrenteId ? '<span class="pildora pildora-recurrente">Periódica</span>' : ''}
+                        <span>${detalle}</span>
+                    </small>
+                    ${inv.isin ? `<small class="texto-isin">${escaparHTML(inv.isin)}</small>` : ''}
+                </span>
+                <span class="mov-importe-columna">
+                    <span class="mov-importe ${venta ? 'monto-positivo' : ''}">${venta ? '+' : ''}${formatoEuros(calcularTotalInversion(inv))}</span>
+                    ${rentabilidadTexto}
+                </span>
+            </button>
+        </div>`;
+}
+
+function eliminarOperacion(indice) {
+    const [quitada] = inversiones.splice(indice, 1);
+    guardarInversionesEnMemoria(inversiones);
+    renderizarInversiones();
+    ayudas.mostrarToast('Operación eliminada', {
+        deshacer: () => {
+            inversiones.splice(Math.min(indice, inversiones.length), 0, quitada);
+            guardarInversionesEnMemoria(inversiones);
+            renderizarInversiones();
+        }
+    });
+}
+
+// Lista de operaciones por días (más recientes primero), con buscador y filtros
 function renderizarOperaciones() {
     const realizadoPorIndice = {};
     calcularPosiciones(inversiones, realizadoPorIndice);
     const ordenadas = inversiones
         .map((inv, indice) => ({ inv, indice }))
-        .sort((a, b) => (b.inv.fecha || '').localeCompare(a.inv.fecha || ''));
+        .sort((a, b) => (b.inv.fecha || '').localeCompare(a.inv.fecha || '') || b.indice - a.indice);
     const visibles = ordenadas.filter(({ inv }) => coincideConFiltros(inv));
 
     const total = ordenadas.length;
     const textoTotal = `${total} ${total === 1 ? 'operación' : 'operaciones'}`;
     resumenOperaciones.textContent = visibles.length === total ? textoTotal : `${visibles.length} de ${textoTotal}`;
+    pintarFiltrosOperaciones();
 
-    listaInversionesTabla.innerHTML = '';
     if (visibles.length === 0) {
-        const mensaje = total === 0 ? 'No hay operaciones registradas' : 'Ninguna operación coincide con el filtro';
-        listaInversionesTabla.innerHTML = `<tr><td colspan="7" class="estado-vacio">${mensaje}</td></tr>`;
+        listaInversionesTabla.innerHTML = `<p class="estado-vacio">${total === 0 ? 'No hay operaciones registradas' : 'Ninguna operación coincide con el filtro'}</p>`;
+        return;
     }
-    visibles.forEach(({ inv, indice }) => {
-        const conTitulos = tieneDetalleTitulos(inv);
-        const cantidad = conTitulos ? formatoDecimal(inv.cantidad, 6) : '—';
-        const precio = conTitulos ? `${formatoDecimal(inv.precio, 4)} €` : '—';
-        const comision = parseFloat(inv.comision || 0);
-        const fechaEspanol = ayudas.formatoFechaES(inv.fecha || obtenerFechaHoy());
-        const venta = esVenta(inv);
-        const realizadoVenta = realizadoPorIndice[indice];
-        const fila = document.createElement('tr');
-        fila.innerHTML = `
-            <td><span class="fecha-larga">${fechaEspanol}</span><span class="fecha-corta">${fechaEspanol.substring(0, 6)}${fechaEspanol.substring(8)}</span></td>
-            <td>
-                ${escaparHTML(inv.nombre || 'Sin nombre')}<br>
-                ${venta ? '<span class="pildora pildora-venta">Venta</span>' : ''}
-                ${inv.recurrenteId ? '<span class="pildora pildora-recurrente">Periódica</span>' : ''}
-                <span class="pildora">${escaparHTML(inv.tipo || 'Otro')}</span>
-                ${inv.isin ? `<small class="texto-isin">${escaparHTML(inv.isin)}</small>` : ''}
-                <small class="detalle-movil">${conTitulos ? `${cantidad} × ${precio}${comision > 0 ? ` ${venta ? '−' : '+'} ${formatoEuros(comision)} com.` : ''}` : venta ? 'Venta de toda la posición' : 'Solo importe'}</small>
-            </td>
-            <td class="col-cantidad">${cantidad}</td>
-            <td class="col-cantidad">${precio}</td>
-            <td class="col-cantidad">${comision > 0 ? formatoEuros(comision) : '—'}</td>
-            <td class="col-cantidad monto-inversion ${venta ? 'monto-venta' : ''}">${venta ? '+' : ''}${formatoEuros(calcularTotalInversion(inv))}${venta && realizadoVenta !== undefined
-                ? `<small class="rentabilidad-operacion rentabilidad-${realizadoVenta > 0.005 ? 'positiva' : realizadoVenta < -0.005 ? 'negativa' : 'neutra'}">${realizadoVenta >= 0 ? '+' : '−'}${formatoEuros(Math.abs(realizadoVenta))} realizado</small>`
-                : rentabilidadOperacion(inv)}</td>
-            <td>
-                <div class="acciones-fila acciones-tres">
-                    <button class="btn-editar btn-duplicar-inversion" data-indice="${indice}" title="Duplicar">${ICONO_DUPLICAR}</button>
-                    <button class="btn-editar btn-editar-inversion" data-indice="${indice}" title="Editar">${ICONO_EDITAR}</button>
-                    <button class="btn-eliminar btn-eliminar-inversion" data-indice="${indice}" title="Eliminar">${ICONO_ELIMINAR}</button>
-                </div>
-            </td>`;
-        listaInversionesTabla.appendChild(fila);
+    const dias = [];
+    visibles.forEach(fila => {
+        const fecha = fila.inv.fecha || obtenerFechaHoy();
+        const ultimo = dias[dias.length - 1];
+        if (ultimo && ultimo.fecha === fecha) ultimo.filas.push(fila); else dias.push({ fecha, filas: [fila] });
     });
+    // Las operaciones suelen estar repartidas en varios meses: el día lleva el mes
+    listaInversionesTabla.innerHTML = dias.map(({ fecha, filas }) => `
+        <div class="mov-dia">
+            <h4 class="mov-dia-titulo"><span>${etiquetaDia(fecha, true)}</span></h4>
+            ${filas.map(({ inv, indice }) => filaOperacion(inv, indice, realizadoPorIndice[indice])).join('')}
+        </div>`).join('');
 
-    document.querySelectorAll('.btn-editar-inversion').forEach(btn => {
-        btn.addEventListener('click', function() { abrirFormularioInversion({ indice: Number(this.getAttribute('data-indice')) }); });
-    });
-    document.querySelectorAll('.btn-duplicar-inversion').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const { recurrenteId, ...plantilla } = inversiones[Number(this.getAttribute('data-indice'))];
-            abrirFormularioInversion({ plantilla });
-        });
-    });
-
-    // Borrar con opción de deshacer
-    document.querySelectorAll('.btn-eliminar-inversion').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const indice = Number(this.getAttribute('data-indice'));
-            const [quitada] = inversiones.splice(indice, 1);
-            guardarInversionesEnMemoria(inversiones);
-            renderizarInversiones();
-            ayudas.mostrarToast('Operación eliminada', {
-                deshacer: () => {
-                    inversiones.splice(Math.min(indice, inversiones.length), 0, quitada);
-                    guardarInversionesEnMemoria(inversiones);
-                    renderizarInversiones();
-                }
-            });
-        });
+    conectarFilasDeslizables(listaInversionesTabla, {
+        alTocar: indice => abrirFormularioInversion({ indice }),
+        alAccion: (accion, indice) => {
+            if (accion === 'editar') abrirFormularioInversion({ indice });
+            if (accion === 'eliminar') eliminarOperacion(indice);
+        }
     });
 }
 
@@ -836,6 +866,12 @@ function hojaMesInversiones(mes, lista, realizadoPorOperacion) {
 }
 
 export function generarExcelInversiones() {
+    const hojas = hojasExcelInversiones();
+    return hojas ? crearLibroExcel(hojas) : null;
+}
+
+// Hojas del Excel de inversiones (también se usan en el Excel conjunto de gastos e inversiones)
+export function hojasExcelInversiones() {
     if (inversiones.length === 0) return null;
     const realizadoPorOperacion = {};
     const posiciones = calcularPosiciones(inversiones, realizadoPorOperacion);
@@ -847,7 +883,7 @@ export function generarExcelInversiones() {
     listaOperaciones(operaciones, inversiones, realizadoPorOperacion);
 
     const porMes = agruparPorMes(inversiones).filter(g => g.mes !== 'sin-fecha').map(g => hojaMesInversiones(g.mes, g.elementos, realizadoPorOperacion));
-    return crearLibroExcel([total, operaciones, ...porMes]);
+    return [total, operaciones, ...porMes];
 }
 
 export function iniciarInversiones(funcionesAyuda) {
@@ -865,7 +901,7 @@ export function iniciarInversiones(funcionesAyuda) {
         btn.addEventListener('click', () => fijarOperacion(btn.getAttribute('data-valor')));
     });
 
-    // Operaciones: desplegable (cerrado al empezar) con filtros
+    // Operaciones: desplegable (abierto al empezar) con buscador y filtros
     const contenedorOperaciones = document.getElementById('contenedor-operaciones');
     const flechaOperaciones = document.getElementById('icono-flecha-operaciones');
     document.getElementById('cabecera-operaciones').addEventListener('click', () => {
@@ -901,6 +937,18 @@ export function iniciarInversiones(funcionesAyuda) {
     });
     document.getElementById('btn-gestionar-carteras').addEventListener('click', abrirModalCarteras);
     filtroTipo.addEventListener('change', renderizarOperaciones);
+    filtroOperacion.addEventListener('change', renderizarOperaciones);
+    document.getElementById('btn-filtros-inv').addEventListener('click', () => {
+        const boton = document.getElementById('btn-filtros-inv');
+        const abierto = document.getElementById('panel-filtros-inv').classList.toggle('oculto') === false;
+        boton.classList.toggle('activo', abierto);
+        boton.setAttribute('aria-expanded', String(abierto));
+    });
+    document.getElementById('btn-quitar-filtros-inv').addEventListener('click', () => {
+        filtroOperacion.value = '';
+        filtroTipo.value = '';
+        renderizarOperaciones();
+    });
 
     // Activo ya registrado: al escribir su nombre se rellena el ISIN (y al revés), además del tipo
     inputNombre.addEventListener('input', () => {
@@ -908,6 +956,7 @@ export function iniciarInversiones(funcionesAyuda) {
         if (!existente) return;
         if (existente.isin) inputIsin.value = existente.isin;
         selectTipo.value = existente.tipo || 'Fondo';
+        pintarTipoInversion();
     });
 
     inputIsin.addEventListener('input', () => {
@@ -918,6 +967,7 @@ export function iniciarInversiones(funcionesAyuda) {
         if (!existente) return;
         inputNombre.value = existente.nombre || '';
         selectTipo.value = existente.tipo || 'Fondo';
+        pintarTipoInversion();
     });
 
     formularioInversion.addEventListener('submit', (evento) => {

@@ -10,10 +10,16 @@
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "icono.png?v=2",
+      "src": "icono.png?v=3",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "icono.png?v=3",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

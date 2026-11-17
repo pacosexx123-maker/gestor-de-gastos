@@ -2,17 +2,19 @@
 // (gastos que van aparte, como "Hogar"), gráficos, historial con filtros,
 // formulario (con notas y repetición mensual), duplicar y deshacer.
 
-import { leerDato, guardarDato } from './datos.js?v=33';
+import { leerDato, guardarDato } from './datos.js?v=34';
 import {
     obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesCorto, nombreMesLargo, formatoFechaES,
     formatoNumero, formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=33';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=33';
-import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=33';
-import { crearRecurrente } from './recurrentes.js?v=33';
-import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=33';
-import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=33';
-import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=33';
+} from './utils.js?v=34';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=34';
+import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=34';
+import { crearRecurrente } from './recurrentes.js?v=34';
+import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=34';
+import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=34';
+import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=34';
+import { conectarFilasDeslizables } from './filas-deslizables.js?v=34';
+import { etiquetaDia } from './utils.js?v=34';
 
 const ICONO = {
     editar: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
@@ -178,7 +180,7 @@ function renderizarTarjetas(mes) {
     $('gasto-total').textContent = formatoNumero(gastos);
     comparacion($('comparacion-ingresos'), ingresos, sumar(anteriores.filter(esIngreso)), mesAnterior, false);
     comparacion($('comparacion-gastos'), gastos, sumar(anteriores.filter(m => !esIngreso(m))), mesAnterior, true);
-    renderizarBalance(mes, ingresos, gastos);
+    renderizarBalance(mes, ingresos, gastos, anteriores.length ? sumar(anteriores.filter(esIngreso)) - sumar(anteriores.filter(m => !esIngreso(m))) : null);
 
     // Una tarjeta por apartado
     const contenedor = $('totales-gastos');
@@ -206,13 +208,27 @@ function renderizarTarjetas(mes) {
 
 // Cifra principal: ingresos − gasto personal, y una barra con el gasto de cada categoría
 // sobre los ingresos (o sobre el gasto, si se ha gastado más de lo ingresado)
-function renderizarBalance(mes, ingresos, gastos) {
+// balanceAnterior: el del mes anterior, o null si ese mes no tiene movimientos
+function renderizarBalance(mes, ingresos, gastos, balanceAnterior) {
     const balance = ingresos - gastos;
     const texto = formatoNumero(balance);
     const coma = texto.lastIndexOf(',');
     const cifra = $('balance-cifra');
     cifra.innerHTML = `${escaparHTML(texto.substring(0, coma).replace('-', '−'))}<span>${escaparHTML(texto.substring(coma))} €</span>`;
     cifra.classList.toggle('negativo', balance < 0);
+
+    // Comparación con el mes anterior: "▲ 120,00 € más que en octubre"
+    const comparacionBalance = $('balance-comparacion');
+    const diferencia = balanceAnterior === null ? 0 : balance - balanceAnterior;
+    const mesAnterior = nombreMesLargo(sumarMeses(mes, -1)).split(' ')[0].toLowerCase();
+    if (balanceAnterior === null) {
+        comparacionBalance.textContent = '';
+    } else if (Math.abs(diferencia) < 0.005) {
+        comparacionBalance.textContent = `Igual que en ${mesAnterior}`;
+    } else {
+        comparacionBalance.textContent = `${diferencia > 0 ? '▲' : '▼'} ${formatoEuros(Math.abs(diferencia))} ${diferencia > 0 ? 'más' : 'menos'} que en ${mesAnterior}`;
+    }
+    comparacionBalance.className = `balance-comparacion ${balanceAnterior === null || Math.abs(diferencia) < 0.005 ? '' : diferencia > 0 ? 'comparacion-buena' : 'comparacion-mala'}`;
 
     const base = Math.max(ingresos, gastos);
     $('balance-barra').innerHTML = base > 0 ? Object.entries(gastoPorCategoria(mes))
@@ -271,16 +287,6 @@ function colorSerieCategoria(nombre) {
 
 const colorMovimiento = m => esIngreso(m) ? 'var(--ingreso)' : colorSerieCategoria(m.categoria || 'Otros');
 
-const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-
-// "Lun 16" o, si la lista abarca varios meses, "Lun 16 nov" (con el año si no es el actual)
-function etiquetaDia(fecha, conMes) {
-    const [anio, mes, dia] = fecha.split('-').map(Number);
-    const texto = `${DIAS_SEMANA[new Date(anio, mes - 1, dia).getDay()]} ${dia}`;
-    if (!conMes) return texto;
-    return `${texto} ${nombreMesCorto(fecha.substring(0, 7)).toLowerCase()}${anio !== new Date().getFullYear() ? ` ${anio}` : ''}`;
-}
-
 // Un movimiento: deslizándolo hacia la izquierda aparecen "Editar" y "Eliminar" (tocarlo también lo edita)
 function filaMovimiento(m, indice) {
     const apartado = m.apartado ? apartadoPorId(m.apartado) : null;
@@ -303,106 +309,37 @@ function filaMovimiento(m, indice) {
         </div>`;
 }
 
-// filas: [{ m, indice }] ya ordenadas de la más reciente a la más antigua
+// filas: [{ m, indice }] ya ordenadas de la más reciente a la más antigua.
+// Cada día lleva a la derecha lo gastado (e ingresado) ese día entre los movimientos de la lista.
 function listaPorDias(filas, conMes) {
-    let html = '';
-    let dia = null;
-    filas.forEach(({ m, indice }) => {
-        const fecha = m.fecha || obtenerFechaHoy();
-        if (fecha !== dia) {
-            if (dia !== null) html += '</div>';
-            dia = fecha;
-            html += `<div class="mov-dia"><h4 class="mov-dia-titulo">${etiquetaDia(fecha, conMes)}</h4>`;
-        }
-        html += filaMovimiento(m, indice);
+    const dias = [];
+    filas.forEach(fila => {
+        const fecha = fila.m.fecha || obtenerFechaHoy();
+        const ultimo = dias[dias.length - 1];
+        if (ultimo && ultimo.fecha === fecha) ultimo.filas.push(fila); else dias.push({ fecha, filas: [fila] });
     });
-    return dia === null ? html : `${html}</div>`;
-}
-
-// --- DESLIZAR UN MOVIMIENTO ---
-
-const ANCHO_ACCIONES = 152; // dos botones de 76 px
-
-function moverFila(mov, desplazamiento, conTransicion) {
-    const fila = mov.querySelector('.mov-fila');
-    fila.style.transition = conTransicion ? '' : 'none';
-    fila.style.transform = desplazamiento ? `translateX(${desplazamiento}px)` : '';
-    // Los botones aparecen poco a poco según se desliza (0 = ocultos, 1 = del todo)
-    mov.style.setProperty('--progreso', Math.min(1, -desplazamiento / ANCHO_ACCIONES).toFixed(3));
-}
-
-function abrirFila(mov) {
-    mov.classList.add('abierto');
-    mov.querySelectorAll('.mov-accion').forEach(b => b.removeAttribute('tabindex'));
-    moverFila(mov, -ANCHO_ACCIONES, true);
-}
-
-function cerrarFila(mov) {
-    mov.classList.remove('abierto');
-    mov.querySelectorAll('.mov-accion').forEach(b => b.setAttribute('tabindex', '-1'));
-    moverFila(mov, 0, true);
-}
-
-function cerrarFilasAbiertas(excepto) {
-    document.querySelectorAll('.mov.abierto').forEach(mov => { if (mov !== excepto) cerrarFila(mov); });
-}
-
-function conectarDeslizar(mov) {
-    const fila = mov.querySelector('.mov-fila');
-    let gesto = null; // { x, y, inicio, desplazamiento, horizontal }
-    let ignorarClic = false;
-
-    fila.addEventListener('pointerdown', e => {
-        if (e.pointerType === 'mouse' && e.button !== 0) return;
-        gesto = { x: e.clientX, y: e.clientY, inicio: mov.classList.contains('abierto') ? -ANCHO_ACCIONES : 0, desplazamiento: 0, horizontal: null, id: e.pointerId };
-    });
-    fila.addEventListener('pointermove', e => {
-        if (!gesto || e.pointerId !== gesto.id) return;
-        const dx = e.clientX - gesto.x;
-        const dy = e.clientY - gesto.y;
-        if (gesto.horizontal === null) {
-            if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-            gesto.horizontal = Math.abs(dx) > Math.abs(dy);
-            if (!gesto.horizontal) { gesto = null; return; } // es un scroll vertical
-            cerrarFilasAbiertas(mov);
-            try { fila.setPointerCapture(e.pointerId); } catch (error) { /* sin captura */ }
-        }
-        // Hacia la izquierda hasta el ancho de los botones (y un poco más, frenando); hacia la derecha, nada
-        let x = gesto.inicio + dx;
-        if (x < -ANCHO_ACCIONES) x = -ANCHO_ACCIONES + (x + ANCHO_ACCIONES) * 0.3;
-        gesto.desplazamiento = Math.min(0, x);
-        moverFila(mov, gesto.desplazamiento, false);
-    });
-    const terminar = () => {
-        if (!gesto) return;
-        if (gesto.horizontal) {
-            ignorarClic = true; // el navegador manda un clic al soltar: no debe abrir el formulario
-            setTimeout(() => { ignorarClic = false; }, 50);
-            if (gesto.desplazamiento < -ANCHO_ACCIONES / 2.5) abrirFila(mov); else cerrarFila(mov);
-        }
-        gesto = null;
-    };
-    fila.addEventListener('pointerup', terminar);
-    fila.addEventListener('pointercancel', terminar);
-
-    // Tocar: si está abierta se cierra; si no, se edita
-    fila.addEventListener('click', () => {
-        if (ignorarClic) return;
-        if (mov.classList.contains('abierto')) { cerrarFila(mov); return; }
-        cerrarFilasAbiertas();
-        ayudas.cerrarModal(modalDetalle);
-        abrirFormularioGasto({ indice: Number(mov.getAttribute('data-indice')) });
-    });
+    return dias.map(({ fecha, filas: delDia }) => {
+        const gastado = sumar(delDia.filter(({ m }) => !esIngreso(m)).map(({ m }) => m));
+        const ingresado = sumar(delDia.filter(({ m }) => esIngreso(m)).map(({ m }) => m));
+        const totales = [
+            gastado > 0 ? `<span>−${formatoEuros(gastado)}</span>` : '',
+            ingresado > 0 ? `<span class="monto-positivo">+${formatoEuros(ingresado)}</span>` : ''
+        ].join('');
+        return `<div class="mov-dia">
+            <h4 class="mov-dia-titulo"><span>${etiquetaDia(fecha, conMes)}</span><span class="mov-dia-total">${totales}</span></h4>
+            ${delDia.map(({ m, indice }) => filaMovimiento(m, indice)).join('')}
+        </div>`;
+    }).join('');
 }
 
 function conectarAcciones(contenedor) {
-    contenedor.querySelectorAll('.mov').forEach(conectarDeslizar);
-    contenedor.querySelectorAll('[data-accion]').forEach(btn => btn.addEventListener('click', () => {
-        const indice = Number(btn.getAttribute('data-indice'));
-        const accion = btn.getAttribute('data-accion');
-        if (accion === 'editar') { ayudas.cerrarModal(modalDetalle); abrirFormularioGasto({ indice }); }
-        if (accion === 'eliminar') eliminarMovimiento(indice);
-    }));
+    conectarFilasDeslizables(contenedor, {
+        alTocar: indice => { ayudas.cerrarModal(modalDetalle); abrirFormularioGasto({ indice }); },
+        alAccion: (accion, indice) => {
+            if (accion === 'editar') { ayudas.cerrarModal(modalDetalle); abrirFormularioGasto({ indice }); }
+            if (accion === 'eliminar') eliminarMovimiento(indice);
+        }
+    });
 }
 
 function rellenarFiltros() {
@@ -445,7 +382,8 @@ function renderizarHistorial(mes) {
     const categoria = $('filtro-mov-categoria').value;
     const ambito = $('filtro-mov-ambito').value;
     const tipo = $('filtro-mov-tipo').value;
-    const todos = $('filtro-mov-periodo').value === 'todos';
+    // Al buscar se mira en todos los meses: lo normal es querer encontrarlo esté donde esté
+    const todos = $('filtro-mov-periodo').value === 'todos' || texto !== '';
 
     const base = movimientos.map((m, indice) => ({ m, indice })).filter(({ m }) => todos || mesDe(m) === mes);
     const filtrados = base.filter(({ m }) => {
@@ -459,7 +397,9 @@ function renderizarHistorial(mes) {
 
     const n = base.length;
     const textoTotal = `${n} ${n === 1 ? 'movimiento' : 'movimientos'}${todos ? ' en total' : ' este mes'}`;
-    $('resumen-historial').textContent = filtrados.length === n ? textoTotal : `${filtrados.length} de ${textoTotal}`;
+    $('resumen-historial').textContent = texto
+        ? `${filtrados.length} ${filtrados.length === 1 ? 'resultado' : 'resultados'} en todos los meses`
+        : filtrados.length === n ? textoTotal : `${filtrados.length} de ${textoTotal}`;
 
     const lista = $('lista-gastos');
     lista.innerHTML = filtrados.length
@@ -982,6 +922,12 @@ function hojaMes(mes, lista) {
 }
 
 export function generarExcelGastos() {
+    const hojas = hojasExcelGastos();
+    return hojas ? crearLibroExcel(hojas) : null;
+}
+
+// Hojas del Excel de gastos (también se usan en el Excel conjunto de gastos e inversiones)
+export function hojasExcelGastos() {
     if (movimientos.length === 0) return null;
     // Todos los meses entre el primero y el último con movimientos (también los vacíos, para las gráficas)
     const ordenados = movimientos.filter(m => /^\d{4}-\d{2}/.test(m.fecha || '')).map(mesDe).sort();
@@ -997,7 +943,7 @@ export function generarExcelGastos() {
 
     const porApartado = apartadosConDatos().map(({ apartado, lista }) => hojaApartado(apartado, lista, meses));
     const porMes = agruparPorMes(movimientos).filter(g => g.mes !== 'sin-fecha').map(g => hojaMes(g.mes, g.elementos));
-    return crearLibroExcel([total, todos, ...porApartado, ...porMes]);
+    return [total, todos, ...porApartado, ...porMes];
 }
 
 // --- INICIO ---
@@ -1058,8 +1004,6 @@ export function iniciarGastos(funcionesAyuda) {
         renderizarHistorial(inputMes.value);
     });
 
-    // Tocar fuera de un movimiento deslizado lo cierra
-    document.addEventListener('pointerdown', e => { if (!e.target.closest('.mov.abierto')) cerrarFilasAbiertas(); });
 
     // Análisis
     document.querySelectorAll('#selector-analisis button').forEach(btn => btn.addEventListener('click', () => {
