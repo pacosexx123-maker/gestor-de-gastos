@@ -3,16 +3,17 @@ import {
     calcularTotalInversion, calcularResumenPorActivo, calcularPosiciones, claveActivo, tieneDetalleTitulos, esVenta,
     formatoNumero, formatoEuros, formatoPorcentaje, formatoDecimalVariable, escaparHTML as escaparTexto, leerImporte,
     sumarMeses, formatoFechaES
-} from './utils.js?v=24';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=24';
-import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=24';
-import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros, dibujarLineas } from './graficos.js?v=24';
+} from './utils.js?v=25';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=25';
+import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=25';
+import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros, dibujarLineas } from './graficos.js?v=25';
 import {
     iniciarValoraciones, abrirValorActual, valorActual, precioActual,
     rentabilidad, formatoRentabilidad, claseRentabilidad
-} from './valoraciones.js?v=24';
-import { leerDato, guardarDato } from './datos.js?v=24';
-import { crearRecurrente } from './recurrentes.js?v=24';
+} from './valoraciones.js?v=25';
+import { leerDato, guardarDato } from './datos.js?v=25';
+import { crearRecurrente } from './recurrentes.js?v=25';
+import { atajosFecha } from './selectores.js?v=25';
 
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICONO_DESPLEGAR = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -28,6 +29,7 @@ const selectTipo = document.getElementById('inv-tipo');
 const inputCantidad = document.getElementById('inv-cantidad');
 const inputPrecio = document.getElementById('inv-precio');
 const inputFecha = document.getElementById('inv-fecha');
+const pintarFecha = atajosFecha(inputFecha, document.getElementById('atajos-fecha-inversion'));
 const displayTotalFormulario = document.getElementById('inv-total-formulario');
 const listaInversionesTabla = document.getElementById('lista-inversiones');
 const listaActivos = document.getElementById('lista-activos');
@@ -252,6 +254,7 @@ export function abrirFormularioInversion(opciones = {}) {
 
     fijarModoImporte(origen && !tieneDetalleTitulos(origen) ? 'total' : 'detalle');
     fijarOperacion(origen && esVenta(origen) ? 'venta' : 'compra');
+    pintarFecha();
     ayudas.abrirModal(modalInversion);
 }
 

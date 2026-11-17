@@ -5,8 +5,8 @@
     <link rel="apple-touch-icon" href="icono.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0b0f17" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0e0f11" media="(prefers-color-scheme: dark)">
     <title>Gestor de Gastos</title>
     <script>
         try {
@@ -18,8 +18,8 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=24">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=25">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -34,7 +34,7 @@
         </div>
 
         <section class="contenedor-totales contenedor-resumen">
-            <div class="tarjeta-total bg-ingreso clicable" id="resumen-ir-gastos" title="Ver gastos">
+            <div class="tarjeta-total tarjeta-principal bg-ingreso clicable" id="resumen-ir-gastos" title="Ver gastos">
                 <div class="total-cabecera">
                     <span class="total-icono"><svg viewBox="0 0 24 24"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/></svg></span>
                     <h3>Ahorro del mes</h3>
@@ -105,6 +105,14 @@
                 <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
         </div>
+
+        <!-- Cifra principal: balance personal del mes y en qué se va -->
+        <section class="balance-mes">
+            <span class="balance-etiqueta">Balance personal del mes</span>
+            <p class="balance-cifra" id="balance-cifra">0<span>,00 €</span></p>
+            <div class="balance-barra" id="balance-barra" aria-hidden="true"></div>
+            <span class="balance-texto" id="balance-texto"></span>
+        </section>
 
         <!-- Totales: ingresos, gasto personal y una tarjeta por apartado (Hogar, etc.) -->
         <section class="contenedor-totales" id="totales-gastos">
@@ -205,7 +213,7 @@
         </div>
 
         <section class="contenedor-totales">
-            <div class="tarjeta-total bg-invertido">
+            <div class="tarjeta-total tarjeta-principal bg-invertido">
                 <div class="total-cabecera">
                     <span class="total-icono">
                         <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -426,13 +434,6 @@
                 </div>
                 <div id="lista-recurrentes" class="lista-config"></div>
             </div>
-            <div class="ajuste-fila ajuste-columna">
-                <div class="ajuste-texto">
-                    <b>Reglas de categorías aprendidas</b>
-                    <small>Se usan para autocompletar y al importar el extracto del banco. Borra las que no quieras.</small>
-                </div>
-                <div id="lista-reglas" class="lista-config lista-reglas"></div>
-            </div>
         </section>
 
         <!-- Seguridad -->
@@ -612,37 +613,39 @@
                 <button id="btn-cerrar-formulario" class="btn-cerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
             <form id="formulario">
-                <div class="dos-columnas">
-                    <div class="grupo-input">
-                        <label for="tipo-movimiento">Tipo</label>
-                        <select id="tipo-movimiento">
-                            <option value="gasto">Gasto</option>
-                            <option value="ingreso">Ingreso</option>
-                        </select>
-                    </div>
-                    <div class="grupo-input">
-                        <label for="mov-apartado">¿Dónde va?</label>
-                        <select id="mov-apartado"></select>
-                    </div>
+                <select id="tipo-movimiento" class="select-oculto" tabindex="-1" aria-hidden="true">
+                    <option value="gasto">Gasto</option>
+                    <option value="ingreso">Ingreso</option>
+                </select>
+                <div class="control-segmentado control-ancho grupo-segmentado" id="selector-tipo" role="group" aria-label="Gasto o ingreso"></div>
+
+                <div class="importe-grande">
+                    <input type="number" id="cantidad" placeholder="0,00" step="0.01" min="0" inputmode="decimal" aria-label="Cantidad en euros" required>
+                    <span>€</span>
                 </div>
-                <p id="ayuda-apartado" class="texto-ayuda texto-ayuda-form oculto"></p>
-                <div class="grupo-input">
-                    <label for="categoria" class="etiqueta-con-enlace">Categoría <button type="button" id="btn-config-desde-formulario" class="enlace">Gestionar categorías y apartados</button></label>
-                    <select id="categoria"></select>
-                </div>
+
                 <div class="grupo-input">
                     <label for="concepto">Concepto</label>
                     <input type="text" id="concepto" list="lista-conceptos" placeholder="Ej. Compra supermercado" autocomplete="off" required>
                     <datalist id="lista-conceptos"></datalist>
                 </div>
-                <div class="dos-columnas">
-                    <div class="grupo-input">
-                        <label for="cantidad">Cantidad (€)</label>
-                        <input type="number" id="cantidad" placeholder="0.00" step="0.01" min="0" inputmode="decimal" required>
-                    </div>
-                    <div class="grupo-input">
-                        <label for="fecha">Fecha</label>
-                        <input type="date" id="fecha" required>
+                <div class="grupo-input">
+                    <label class="etiqueta-con-enlace">Categoría <button type="button" id="btn-config-desde-formulario" class="enlace">Gestionar</button></label>
+                    <select id="categoria" class="select-oculto" tabindex="-1" aria-hidden="true"></select>
+                    <div class="chips" id="chips-categoria" role="group" aria-label="Categoría"></div>
+                </div>
+                <div class="grupo-input">
+                    <label>¿Dónde va?</label>
+                    <select id="mov-apartado" class="select-oculto" tabindex="-1" aria-hidden="true"></select>
+                    <div class="chips" id="chips-apartado" role="group" aria-label="Personal o apartado"></div>
+                    <p id="ayuda-apartado" class="texto-ayuda texto-ayuda-form oculto"></p>
+                </div>
+                <div class="grupo-input">
+                    <label for="fecha">Fecha</label>
+                    <div class="chips selector-fecha" id="atajos-fecha">
+                        <button type="button" data-dias="0">Hoy</button>
+                        <button type="button" data-dias="-1">Ayer</button>
+                        <input type="date" id="fecha" aria-label="Elegir otra fecha" required>
                     </div>
                 </div>
                 <div class="grupo-input">
@@ -777,7 +780,11 @@
                 </div>
                 <div class="grupo-input">
                     <label for="inv-fecha">Fecha</label>
-                    <input type="date" id="inv-fecha" required>
+                    <div class="chips selector-fecha" id="atajos-fecha-inversion">
+                        <button type="button" data-dias="0">Hoy</button>
+                        <button type="button" data-dias="-1">Ayer</button>
+                        <input type="date" id="inv-fecha" aria-label="Elegir otra fecha" required>
+                    </div>
                 </div>
                 <div class="resumen-formulario">
                     <div>
@@ -1114,6 +1121,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=24"></script>
+    <script type="module" src="js/main.js?v=25"></script>
 </body>
 </html>

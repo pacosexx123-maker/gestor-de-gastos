@@ -2,16 +2,17 @@
 // (gastos que van aparte, como "Hogar"), gráficos, historial con filtros,
 // formulario (con notas y repetición mensual), duplicar y deshacer.
 
-import { leerDato, guardarDato } from './datos.js?v=24';
+import { leerDato, guardarDato } from './datos.js?v=25';
 import {
     obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesCorto, nombreMesLargo, formatoFechaES,
     formatoNumero, formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=24';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=24';
-import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=24';
-import { crearRecurrente } from './recurrentes.js?v=24';
-import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=24';
-import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=24';
+} from './utils.js?v=25';
+import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=25';
+import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=25';
+import { crearRecurrente } from './recurrentes.js?v=25';
+import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=25';
+import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=25';
+import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=25';
 
 const ICONO = {
     editar: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
@@ -41,6 +42,12 @@ const inputCantidad = $('cantidad');
 const inputFecha = $('fecha');
 const inputNota = $('mov-nota');
 const checkRecurrente = $('mov-recurrente');
+
+// Botones del formulario (los <select> siguen guardando el valor, ocultos)
+const pintarTipo = chipsDesdeSelect(selectTipo, $('selector-tipo'));
+const pintarCategorias = chipsDesdeSelect(selectCategoria, $('chips-categoria'));
+const pintarApartados = chipsDesdeSelect(selectApartado, $('chips-apartado'));
+const pintarFecha = atajosFecha(inputFecha, $('atajos-fecha'));
 
 let movimientos = leerDato('movimientos');
 let presupuestos = leerDato('presupuestos');
@@ -168,6 +175,7 @@ function renderizarTarjetas(mes) {
     $('gasto-total').textContent = formatoNumero(gastos);
     comparacion($('comparacion-ingresos'), ingresos, sumar(anteriores.filter(esIngreso)), mesAnterior, false);
     comparacion($('comparacion-gastos'), gastos, sumar(anteriores.filter(m => !esIngreso(m))), mesAnterior, true);
+    renderizarBalance(mes, ingresos, gastos);
 
     // Una tarjeta por apartado
     const contenedor = $('totales-gastos');
@@ -191,6 +199,31 @@ function renderizarTarjetas(mes) {
         tarjeta.addEventListener('click', () => abrirDetalle({ tipo: 'apartado', id: apartado.id }));
         contenedor.appendChild(tarjeta);
     });
+}
+
+// Cifra principal: ingresos − gasto personal, y una barra con el gasto de cada categoría
+// sobre los ingresos (o sobre el gasto, si se ha gastado más de lo ingresado)
+function renderizarBalance(mes, ingresos, gastos) {
+    const balance = ingresos - gastos;
+    const texto = formatoNumero(balance);
+    const coma = texto.lastIndexOf(',');
+    const cifra = $('balance-cifra');
+    cifra.innerHTML = `${escaparHTML(texto.substring(0, coma).replace('-', '−'))}<span>${escaparHTML(texto.substring(coma))} €</span>`;
+    cifra.classList.toggle('negativo', balance < 0);
+
+    const orden = obtenerCategorias('gasto');
+    const base = Math.max(ingresos, gastos);
+    $('balance-barra').innerHTML = base > 0 ? Object.entries(gastoPorCategoria(mes))
+        .sort((a, b) => b[1] - a[1])
+        .map(([nombre, valor]) => {
+            const indice = orden.indexOf(nombre);
+            const color = indice >= 0 && indice < 8 ? `var(--serie-${indice + 1})` : 'var(--serie-otros)';
+            return `<i style="width:${(valor / base) * 100}%;background:${color}" title="${escaparHTML(nombre)}"></i>`;
+        }).join('') : '';
+
+    $('balance-texto').textContent = ingresos > 0
+        ? `Has gastado el ${formatoPorcentaje((gastos / ingresos) * 100, 0)} de tus ingresos del mes`
+        : gastos > 0 ? 'Aún no has apuntado ingresos este mes' : 'Aún no hay movimientos este mes';
 }
 
 // --- ANÁLISIS (gráficos) ---
@@ -389,6 +422,7 @@ function rellenarCategorias(seleccionada) {
     selectCategoria.innerHTML = lista.map(c => `<option value="${escaparHTML(c)}">${escaparHTML(c)}</option>`).join('') +
         '<option value="__nueva__">+ Nueva categoría…</option>';
     selectCategoria.value = seleccionada && lista.includes(seleccionada) ? seleccionada : lista[0];
+    pintarCategorias();
 }
 
 function rellenarApartados(seleccionado) {
@@ -396,6 +430,7 @@ function rellenarApartados(seleccionado) {
         obtenerApartados().map(a => `<option value="${a.id}">${escaparHTML(a.nombre)}</option>`).join('');
     selectApartado.value = seleccionado && apartadoPorId(seleccionado) ? seleccionado : '';
     actualizarAyudaApartado();
+    pintarApartados();
 }
 
 function actualizarAyudaApartado() {
@@ -457,6 +492,8 @@ export function abrirFormularioGasto(opciones = {}) {
     inputFecha.value = indiceEditando !== null && origen.fecha ? origen.fecha : obtenerFechaHoy();
     $('grupo-recurrente').classList.toggle('oculto', indiceEditando !== null);
     rellenarSugerenciasConcepto();
+    pintarTipo();
+    pintarFecha();
 
     $('titulo-formulario-gasto').textContent = indiceEditando !== null ? 'Editar movimiento' : opciones.plantilla ? 'Duplicar movimiento' : 'Nuevo movimiento';
     $('btn-guardar-gasto').textContent = indiceEditando !== null ? 'Actualizar movimiento' : 'Guardar movimiento';
@@ -510,7 +547,7 @@ function guardarFormulario(evento) {
 export function renderizarGastos() {
     const mes = inputMes.value || obtenerMesActual();
     tituloMes.textContent = nombreMesLargo(mes);
-    [tituloMes, $('totales-gastos')].forEach(el => {
+    [tituloMes, $('totales-gastos'), document.querySelector('.balance-mes')].forEach(el => {
         el.classList.remove('animacion-suave');
         void el.offsetWidth;
         el.classList.add('animacion-suave');
