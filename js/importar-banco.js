@@ -5,11 +5,11 @@
 // Cada movimiento se categoriza con las reglas aprendidas; lo que se cambie en la vista
 // previa se aprende para la próxima vez.
 
-import { normalizarCabecera, leerNumero, leerFecha } from './importar-ordenes.js?v=28';
-import { obtenerMovimientos, anadirMovimientos } from './gastos.js?v=28';
-import { obtenerCategorias, obtenerApartados } from './configuracion.js?v=28';
-import { buscarRegla, aprenderRegla, patronDe, palabrasClave } from './reglas.js?v=28';
-import { escaparHTML, formatoEuros, formatoFechaES } from './utils.js?v=28';
+import { normalizarCabecera, leerNumero, leerFecha } from './importar-ordenes.js?v=29';
+import { obtenerMovimientos, anadirMovimientos } from './gastos.js?v=29';
+import { obtenerCategorias, obtenerApartados } from './configuracion.js?v=29';
+import { buscarRegla, aprenderRegla, patronDe, palabrasClave } from './reglas.js?v=29';
+import { escaparHTML, formatoEuros, formatoFechaES } from './utils.js?v=29';
 
 const $ = id => document.getElementById(id);
 const modal = $('modal-importar-banco');

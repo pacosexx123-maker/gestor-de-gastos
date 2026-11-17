@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=28">
+    <link rel="stylesheet" href="css/style.css?v=29">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -586,7 +586,7 @@
     <div id="menu-datos" class="menu-datos oculto" role="menu" aria-label="Exportar, copia e importar">
         <button type="button" id="btn-exportar" class="menu-opcion" role="menuitem">
             <span class="menu-icono"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
-            <span class="menu-texto"><b>Exportar a Excel</b><small id="texto-exportar-seccion">Gastos (.xlsx)</small></span>
+            <span class="menu-texto"><b id="titulo-exportar">Exportar a Excel (solo gastos)</b><small id="texto-exportar-seccion">Gastos (.xlsx)</small></span>
         </button>
         <button type="button" id="btn-exportar-json" class="menu-opcion" role="menuitem">
             <span class="menu-icono"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
@@ -1121,6 +1121,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=28"></script>
+    <script type="module" src="js/main.js?v=29"></script>
 </body>
 </html>
