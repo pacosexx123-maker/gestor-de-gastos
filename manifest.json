@@ -6,11 +6,11 @@
   "scope": "./",
   "display": "standalone",
   "lang": "es",
-  "background_color": "#f5f6f8",
-  "theme_color": "#f5f6f8",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "icono.png",
+      "src": "icono.png?v=2",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
