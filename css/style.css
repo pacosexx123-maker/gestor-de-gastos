@@ -2117,6 +2117,10 @@ input:focus, select:focus, textarea:focus {
 @media (prefers-reduced-motion: reduce) { .mov-fila { transition: none; } }
 .lista-movimientos-modal { padding: 0 24px 16px; }
 
+/* Cambiar de pestaña deslizando: la pestaña que entra va en una capa fija al lado de la actual */
+.capa-deslizar { position: fixed; inset: 0; z-index: 50; overflow: hidden; pointer-events: none; }
+.capa-deslizar .app-contenedor { will-change: transform; }
+
 /* Filtros del historial: buscador + botón "Filtros" que abre un panel con botones */
 .filtros-historial { display: flex; flex-direction: column; gap: 12px; padding: 14px 0 4px; }
 .filtros-barra { display: flex; gap: 8px; }

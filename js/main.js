@@ -1,29 +1,29 @@
 // Arranque de la app: navegación entre pestañas, avisos, ventanas, menú de datos
 // (exportar, copia de seguridad e importar) y conexión entre los módulos.
 
-import { obtenerFechaHoy, descargarArchivo, formatoFechaES } from './utils.js?v=32';
-import { bytesABase64, MIME_EXCEL } from './excel.js?v=32';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=32';
+import { obtenerFechaHoy, descargarArchivo, formatoFechaES } from './utils.js?v=33';
+import { bytesABase64, MIME_EXCEL } from './excel.js?v=33';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=33';
 import {
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, reemplazarInversiones,
     generarExcelInversiones, anadirInversiones, obtenerHistoricoValor, reemplazarHistoricoValor
-} from './inversiones.js?v=32';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo, leerFilasArchivo, sonOrdenesDeBroker } from './importar-ordenes.js?v=32';
-import { iniciarImportacionBanco, importarBancoDesdeFilas } from './importar-banco.js?v=32';
-import { obtenerReglas, reemplazarReglas } from './reglas.js?v=32';
-import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=32';
-import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=32';
-import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=32';
-import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=32';
+} from './inversiones.js?v=33';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo, leerFilasArchivo, sonOrdenesDeBroker } from './importar-ordenes.js?v=33';
+import { iniciarImportacionBanco, importarBancoDesdeFilas } from './importar-banco.js?v=33';
+import { obtenerReglas, reemplazarReglas } from './reglas.js?v=33';
+import { iniciarCopiaSeguridad, abrirModalCopia, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=33';
+import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=33';
+import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=33';
+import { iniciarAjustes, renderizarAjustes } from './ajustes.js?v=33';
 import {
     iniciarGastos, abrirFormularioGasto, obtenerMovimientos, reemplazarMovimientos, anadirMovimientos,
     generarExcelGastos, renombrarCategoriaEnMovimientos, quitarApartadoDeMovimientos,
     obtenerPresupuestos, reemplazarPresupuestos, renderizarGastos
-} from './gastos.js?v=32';
-import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=32';
-import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=32';
-import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=32';
-import { iniciarBloqueo } from './bloqueo.js?v=32';
+} from './gastos.js?v=33';
+import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=33';
+import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=33';
+import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=33';
+import { iniciarBloqueo } from './bloqueo.js?v=33';
 
 // --- AVISOS (con opción de deshacer) ---
 
@@ -70,14 +70,15 @@ const seccionInicio = localStorage.getItem('seccionInicio');
 const seccionGuardada = SECCIONES.includes(seccionInicio) ? seccionInicio : localStorage.getItem('seccionActiva');
 let seccionActiva = SECCIONES.includes(seccionGuardada) ? seccionGuardada : 'gastos';
 
-function cambiarSeccion(seccion) {
+// opciones.sinAnimacion: al terminar de deslizar con el dedo (la pestaña ya ha entrado)
+function cambiarSeccion(seccion, opciones = {}) {
     const anterior = seccionActiva;
     seccionActiva = seccion;
     localStorage.setItem('seccionActiva', seccion);
     SECCIONES.forEach(s => document.getElementById(`seccion-${s}`).classList.toggle('oculto', s !== seccion));
 
     // La sección nueva entra desde el lado hacia el que se avanza
-    if (anterior !== seccion) {
+    if (anterior !== seccion && !opciones.sinAnimacion) {
         const elemento = document.getElementById(`seccion-${seccion}`);
         const clase = SECCIONES.indexOf(seccion) > SECCIONES.indexOf(anterior) ? 'entrar-derecha' : 'entrar-izquierda';
         elemento.classList.remove('entrar-derecha', 'entrar-izquierda');
@@ -175,30 +176,116 @@ document.addEventListener('touchend', () => {
     }
 });
 
-// Deslizar hacia los lados para cambiar de pestaña (sobre el selector de mes se cambia de mes)
-let inicioToque = null;
+// Deslizar hacia los lados para cambiar de pestaña. La pantalla sigue al dedo y la pestaña de al lado
+// entra a la vez (a mitad del gesto se ven las dos). Sobre el selector de mes se cambia de mes.
+//
+// Mientras se arrastra, la pestaña que entra se pasa a una capa fija (.capa-deslizar) colocada al
+// lado de la actual; al soltar se completa el cambio o se vuelve atrás, y la pestaña vuelve a su sitio.
+const TRANSICION_DESLIZAR = 'transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)';
+let deslizar = null; // { x, y, tiempo, horizontal, sentido, dx, actual, destino, entrante, capa, interior, hueco, animando }
+
+function sePuedeDeslizarDesde(objetivo) {
+    if (document.body.classList.contains('body-fijo') || document.documentElement.classList.contains('bloqueada')) return false;
+    if (objetivo.closest('#zona-swipe-mes, input, select, textarea, .mov')) return false; // en un movimiento, deslizar muestra sus opciones
+    const tabla = objetivo.closest('.tabla-contenedor');
+    return !(tabla && tabla.scrollWidth > tabla.clientWidth); // tabla que se desplaza de lado
+}
+
+// Prepara la pestaña que entra (la siguiente si sentido = 1, la anterior si -1)
+function prepararDeslizar(sentido) {
+    deslizar.sentido = sentido;
+    deslizar.actual = document.getElementById(`seccion-${seccionActiva}`);
+    deslizar.actual.classList.remove('entrar-derecha', 'entrar-izquierda');
+    deslizar.actual.style.transition = 'none';
+    deslizar.destino = SECCIONES[SECCIONES.indexOf(seccionActiva) + sentido] || null;
+    if (!deslizar.destino) return; // primera o última pestaña: solo se estira un poco
+
+    if (deslizar.destino === 'ajustes') intentar(() => { renderizarAjustes(); renderizarRecurrentes(); });
+    if (deslizar.destino === 'resumen') intentar(renderizarResumen);
+    const entrante = document.getElementById(`seccion-${deslizar.destino}`);
+    const hueco = document.createComment('pestaña');
+    entrante.before(hueco);
+    const capa = document.createElement('div');
+    capa.className = 'capa-deslizar';
+    const interior = document.createElement('div');
+    interior.className = 'app-contenedor';
+    interior.style.transition = 'none';
+    interior.appendChild(entrante);
+    capa.appendChild(interior);
+    document.body.appendChild(capa);
+    entrante.classList.remove('oculto', 'entrar-derecha', 'entrar-izquierda');
+    Object.assign(deslizar, { entrante, hueco, capa, interior });
+}
+
+function pintarDeslizar(dx) {
+    const x = deslizar.destino ? dx : dx / 4; // sin pestaña al lado, resistencia
+    deslizar.actual.style.transform = `translateX(${x}px)`;
+    if (deslizar.interior) deslizar.interior.style.transform = `translateX(${x + deslizar.sentido * window.innerWidth}px)`;
+}
+
+// Devuelve la pestaña que entraba a su sitio y quita la capa
+function deshacerCapa(d, quedaVisible) {
+    if (d.entrante) {
+        d.hueco.replaceWith(d.entrante);
+        d.entrante.classList.toggle('oculto', !quedaVisible);
+        d.capa.remove();
+    }
+    d.actual.style.transform = '';
+    d.actual.style.transition = '';
+    Object.assign(d, { entrante: null, hueco: null, capa: null, interior: null });
+}
 
 document.addEventListener('touchstart', e => {
-    inicioToque = null;
-    if (e.touches.length !== 1 || document.body.classList.contains('body-fijo') || document.documentElement.classList.contains('bloqueada')) return;
-    const objetivo = e.target;
-    if (objetivo.closest('#zona-swipe-mes, input, select, textarea, .mov')) return; // en un movimiento, deslizar muestra sus opciones
-    const tabla = objetivo.closest('.tabla-contenedor');
-    if (tabla && tabla.scrollWidth > tabla.clientWidth) return; // tabla que se desplaza de lado
-    inicioToque = { x: e.touches[0].clientX, y: e.touches[0].clientY, tiempo: Date.now() };
+    if (deslizar && deslizar.animando) return;
+    deslizar = null;
+    if (e.touches.length !== 1 || !sePuedeDeslizarDesde(e.target)) return;
+    deslizar = { x: e.touches[0].clientX, y: e.touches[0].clientY, tiempo: Date.now(), horizontal: null, dx: 0 };
 }, { passive: true });
 
-document.addEventListener('touchend', e => {
-    if (!inicioToque) return;
-    const dx = e.changedTouches[0].clientX - inicioToque.x;
-    const dy = e.changedTouches[0].clientY - inicioToque.y;
-    const duracion = Date.now() - inicioToque.tiempo;
-    inicioToque = null;
-    // Solo gestos claramente horizontales y rápidos, para no interferir con el scroll
-    if (duracion > 800 || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-    const destino = SECCIONES.indexOf(seccionActiva) + (dx < 0 ? 1 : -1);
-    if (destino >= 0 && destino < SECCIONES.length) cambiarSeccion(SECCIONES[destino]);
-}, { passive: true });
+document.addEventListener('touchmove', e => {
+    if (!deslizar || deslizar.animando) return;
+    const dx = e.touches[0].clientX - deslizar.x;
+    const dy = e.touches[0].clientY - deslizar.y;
+    if (deslizar.horizontal === null) {
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+        deslizar.horizontal = Math.abs(dx) > Math.abs(dy) * 1.2;
+        if (!deslizar.horizontal) { deslizar = null; return; } // es scroll vertical
+        cerrarMenuDatos();
+        prepararDeslizar(dx < 0 ? 1 : -1);
+    }
+    // Si el dedo vuelve y cruza el punto de partida, entra la pestaña del otro lado
+    const sentido = dx < 0 ? 1 : -1;
+    if (dx !== 0 && sentido !== deslizar.sentido) {
+        deshacerCapa(deslizar, false);
+        prepararDeslizar(sentido);
+    }
+    deslizar.dx = dx;
+    pintarDeslizar(dx);
+    if (e.cancelable) e.preventDefault(); // que la página no haga scroll mientras se desliza de lado
+}, { passive: false });
+
+function terminarDeslizar() {
+    if (!deslizar || deslizar.animando) return;
+    const d = deslizar;
+    if (!d.horizontal) { deslizar = null; return; }
+    d.animando = true;
+    const ancho = window.innerWidth;
+    const velocidad = Math.abs(d.dx) / Math.max(1, Date.now() - d.tiempo);
+    // Se completa si se ha deslizado más de un tercio de la pantalla o con un gesto rápido
+    const completar = !!d.destino && (Math.abs(d.dx) > ancho / 3 || (velocidad > 0.5 && Math.abs(d.dx) > 40));
+    d.actual.style.transition = TRANSICION_DESLIZAR;
+    if (d.interior) d.interior.style.transition = TRANSICION_DESLIZAR;
+    d.actual.style.transform = completar ? `translateX(${-d.sentido * ancho}px)` : '';
+    if (d.interior) d.interior.style.transform = completar ? 'translateX(0)' : `translateX(${d.sentido * ancho}px)`;
+
+    setTimeout(() => {
+        deshacerCapa(d, completar);
+        if (completar) cambiarSeccion(d.destino, { sinAnimacion: true });
+        deslizar = null;
+    }, 290);
+}
+document.addEventListener('touchend', terminarDeslizar, { passive: true });
+document.addEventListener('touchcancel', terminarDeslizar, { passive: true });
 
 // --- DATOS DE TODA LA APP (copias de seguridad) ---
 
