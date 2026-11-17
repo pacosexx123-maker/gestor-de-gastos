@@ -3,7 +3,7 @@
 //   página (oculto) y es el que guarda el valor, así que el resto del código no cambia.
 // - atajosFecha: botones "Hoy" y "Ayer" junto al campo de fecha, que sigue sirviendo para elegir otra.
 
-import { escaparHTML } from './utils.js?v=27';
+import { escaparHTML } from './utils.js?v=28';
 
 // Devuelve una función para volver a pintar los botones cuando cambian las opciones o el valor
 export function chipsDesdeSelect(select, contenedor) {
