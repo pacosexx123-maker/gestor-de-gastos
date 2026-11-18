@@ -1952,6 +1952,20 @@ input:focus, select:focus, textarea:focus {
 }
 .mov-fila:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; border-radius: 6px; }
 .mov-punto { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+/* Icono de la categoría: la forma la identifica sin depender del color, que queda como apoyo en el fondo */
+.mov-icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: color-mix(in srgb, var(--color-categoria) 22%, transparent);
+    color: var(--texto-principal);
+}
+.mov-icono svg { width: 17px; height: 17px; }
+.mov-icono b { font-size: 14px; font-weight: 800; line-height: 1; }
 .mov-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .mov-texto b { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
 .mov-texto small { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 12px; color: var(--texto-terciario); }
