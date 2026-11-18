@@ -1657,20 +1657,25 @@ html.bloqueada main, html.bloqueada .barra-navegacion, html.bloqueada .btn-flota
 /* =========================================================
    Aviso con "Deshacer"
    ========================================================= */
-.toast { display: flex; align-items: center; gap: 14px; white-space: normal; max-width: calc(100vw - 32px); }
+.toast { width: max-content; max-width: calc(100vw - 32px); white-space: normal; text-align: center; }
+.toast-texto { white-space: pre-wrap; }
 .toast-accion {
+    margin: -10px 0; /* zona de toque amplia sin hacer más alto el aviso */
+    padding: 10px 4px;
     border: none;
     background: transparent;
-    color: var(--serie-1);
+    color: #8fb2ff;
     font-family: inherit;
     font-size: 14px;
     font-weight: 700;
-    padding: 4px 2px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
     cursor: pointer;
     white-space: nowrap;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .toast-accion { color: #2a78d6; } }
-:root[data-theme="dark"] .toast-accion { color: #2a78d6; }
+/* En modo oscuro el aviso es claro: el enlace necesita un azul más oscuro */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .toast-accion { color: #1f5bd8; } }
+:root[data-theme="dark"] .toast-accion { color: #1f5bd8; }
 
 /* =========================================================
    Móvil
@@ -1953,7 +1958,7 @@ input:focus, select:focus, textarea:focus {
 .mov-texto .pildora { padding: 1px 8px; font-size: 11px; }
 .mov-texto .nota-movimiento { display: block; margin: 0; }
 .mov-importe { flex-shrink: 0; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
-/* Deslizar a la izquierda: la fila se mueve y debajo aparecen poco a poco "Editar" y "Eliminar" */
+/* Deslizar a la izquierda: la fila se mueve y debajo aparece poco a poco "Eliminar" */
 .mov { position: relative; overflow: hidden; }
 .mov-fila {
     position: relative;
@@ -1965,7 +1970,7 @@ input:focus, select:focus, textarea:focus {
     transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .lista-movimientos-modal .mov-fila { background: var(--superficie); }
-.mov-acciones { position: absolute; top: 0; right: 0; bottom: 0; display: flex; width: 152px; }
+.mov-acciones { position: absolute; top: 0; right: 0; bottom: 0; display: flex; width: 76px; }
 .mov-accion {
     flex: 1;
     display: flex;
@@ -1982,7 +1987,6 @@ input:focus, select:focus, textarea:focus {
 }
 .mov-accion svg, .mov-accion span { transform: scale(calc(0.6 + 0.4 * var(--progreso, 0))); }
 .mov-accion svg { width: 18px; height: 18px; }
-.mov-accion-editar { background: var(--texto-secundario); color: var(--fondo-app); }
 .mov-accion-eliminar { background: var(--gasto); color: #fff; }
 @media (prefers-reduced-motion: reduce) { .mov-fila { transition: none; } }
 .lista-movimientos-modal { padding: 0 24px 16px; }
