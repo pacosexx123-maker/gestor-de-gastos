@@ -2,19 +2,19 @@
 // (gastos que van aparte, como "Hogar"), gráficos, historial con filtros,
 // formulario (con notas y repetición mensual), duplicar y deshacer.
 
-import { leerDato, guardarDato } from './datos.js?v=36';
+import { leerDato, guardarDato } from './datos.js?v=37';
 import {
     obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesCorto, nombreMesLargo, formatoFechaES,
     formatoNumero, formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=36';
-import { agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=36';
-import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=36';
-import { crearRecurrente } from './recurrentes.js?v=36';
-import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=36';
-import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=36';
-import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=36';
-import { conectarFilasDeslizables } from './filas-deslizables.js?v=36';
-import { etiquetaDia, enRangoDeMeses } from './utils.js?v=36';
+} from './utils.js?v=37';
+import { agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=37';
+import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=37';
+import { crearRecurrente } from './recurrentes.js?v=37';
+import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=37';
+import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=37';
+import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=37';
+import { conectarFilasDeslizables } from './filas-deslizables.js?v=37';
+import { etiquetaDia, enRangoDeMeses } from './utils.js?v=37';
 
 const ICONO = {
     editar: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
@@ -667,10 +667,9 @@ function guardarFormulario(evento) {
 export function renderizarGastos() {
     const mes = inputMes.value || obtenerMesActual();
     tituloMes.textContent = nombreMesLargo(mes);
+    // Con el.animate la animación solo se ve al pintar: una clase de CSS se repetiría cada vez que se vuelve a la pestaña
     [tituloMes, $('totales-gastos'), document.querySelector('.balance-mes')].forEach(el => {
-        el.classList.remove('animacion-suave');
-        void el.offsetWidth;
-        el.classList.add('animacion-suave');
+        el.animate([{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 350, easing: 'ease-out' });
     });
     renderizarTarjetas(mes);
     renderizarAnalisis(mes);

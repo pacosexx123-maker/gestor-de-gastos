@@ -793,8 +793,6 @@ input:focus, select:focus {
 }
 .toast.mostrar { bottom: 100px; opacity: 1; visibility: visible; }
 
-/* Animación suave al cambiar de mes */
-.animacion-suave { animation: aparecerSuave 0.35s ease-out; }
 @keyframes aparecerSuave {
     0% { opacity: 0; transform: translateY(4px); }
     100% { opacity: 1; transform: translateY(0); }
