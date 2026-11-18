@@ -3,19 +3,19 @@ import {
     calcularTotalInversion, calcularResumenPorActivo, calcularPosiciones, claveActivo, tieneDetalleTitulos, esVenta,
     formatoNumero, formatoEuros, formatoPorcentaje, formatoDecimalVariable, escaparHTML as escaparTexto, leerImporte,
     sumarMeses, formatoFechaES
-} from './utils.js?v=35';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=35';
-import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=35';
-import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros, dibujarLineas } from './graficos.js?v=35';
+} from './utils.js?v=36';
+import { agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=36';
+import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=36';
+import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros, dibujarLineas } from './graficos.js?v=36';
 import {
     iniciarValoraciones, abrirValorActual, valorActual, precioActual,
     rentabilidad, formatoRentabilidad, claseRentabilidad
-} from './valoraciones.js?v=35';
-import { leerDato, guardarDato } from './datos.js?v=35';
-import { crearRecurrente } from './recurrentes.js?v=35';
-import { atajosFecha, chipsDesdeSelect } from './selectores.js?v=35';
-import { conectarFilasDeslizables } from './filas-deslizables.js?v=35';
-import { etiquetaDia } from './utils.js?v=35';
+} from './valoraciones.js?v=36';
+import { leerDato, guardarDato } from './datos.js?v=36';
+import { crearRecurrente } from './recurrentes.js?v=36';
+import { atajosFecha, chipsDesdeSelect } from './selectores.js?v=36';
+import { conectarFilasDeslizables } from './filas-deslizables.js?v=36';
+import { etiquetaDia, enRangoDeMeses } from './utils.js?v=36';
 
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICONO_DESPLEGAR = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -697,6 +697,76 @@ function listaOperaciones(hoja, lista, realizadoPorOperacion) {
     if (vendido > 0) total('Beneficio realizado', { f: `SUM(${rango(9)})`, v: realizado, tipo: 'dineroSigno', estilo: 'total' });
 }
 
+// Aportaciones y ventas mes a mes, con su gráfica
+function bloqueAportaciones(hoja, lista, ancla) {
+    const meses = [];
+    const fechas = lista.map(i => (i.fecha || '').substring(0, 7)).filter(m => /^\d{4}-\d{2}$/.test(m)).sort();
+    if (fechas.length) for (let m = fechas[0]; m <= fechas[fechas.length - 1]; m = sumarMeses(m, 1)) meses.push(m);
+    if (!meses.length) return;
+
+    const aportado = lista.filter(i => !esVenta(i)).reduce((s, i) => s + calcularTotalInversion(i), 0);
+    const vendido = lista.filter(esVenta).reduce((s, i) => s + calcularTotalInversion(i), 0);
+    hoja.anadir([]);
+    hoja.anadir([{ v: 'Aportaciones por mes', estilo: 'seccion' }]);
+    const cab = filaCabeceraExcel(hoja, ['Mes', 'Aportado', 'Vendido', 'Neto'], 1);
+    const datos = meses.map(m => {
+        const delMes = lista.filter(i => (i.fecha || '').startsWith(m));
+        return { mes: m, aportado: delMes.filter(i => !esVenta(i)).reduce((s, i) => s + calcularTotalInversion(i), 0), vendido: delMes.filter(esVenta).reduce((s, i) => s + calcularTotalInversion(i), 0) };
+    });
+    datos.forEach(d => {
+        const f = hoja.filaActual + 1;
+        hoja.anadir([{ v: nombreHojaMes(d.mes) }, { v: d.aportado, tipo: 'dinero' }, { v: d.vendido, tipo: 'dinero' }, { f: `B${f}-C${f}`, v: d.aportado - d.vendido, tipo: 'dineroSigno' }]);
+    });
+    const pm = cab + 1, um = hoja.filaActual;
+    hoja.anadir([{ v: 'Total', estilo: 'total' }, { f: `SUM(B${pm}:B${um})`, v: aportado, tipo: 'dinero', estilo: 'total' }, { f: `SUM(C${pm}:C${um})`, v: vendido, tipo: 'dinero', estilo: 'total' }, { f: `SUM(D${pm}:D${um})`, v: aportado - vendido, tipo: 'dineroSigno', estilo: 'total' }]);
+    const series = [{ nombre: 'Aportado', rango: `B${pm}:B${um}`, valores: datos.map(d => d.aportado), color: COLORES_GRAFICO[0] }];
+    if (vendido > 0) series.push({ nombre: 'Vendido', rango: `C${pm}:C${um}`, valores: datos.map(d => d.vendido), color: COLORES_GRAFICO[2] });
+    hoja.graficos.push({ tipo: 'columnas', titulo: 'Aportaciones por mes', ancla, sinLeyenda: series.length === 1,
+        categorias: { rango: `A${pm}:A${um}`, valores: datos.map(d => nombreHojaMes(d.mes)) }, series });
+}
+
+// Hoja "Total" cuando se exporta solo una parte del historial: las cifras de ese periodo.
+// Las posiciones y su valor actual dependen de toda la cartera, así que aquí no aparecen.
+function hojaPeriodoInversiones(lista, realizadoPorOperacion) {
+    const hoja = new Hoja('Total');
+    hoja.anchos = [30, 15, 14, 14, 14, 14, 14, 14, 3];
+    const aportado = lista.filter(i => !esVenta(i)).reduce((s, i) => s + calcularTotalInversion(i), 0);
+    const vendido = lista.filter(esVenta).reduce((s, i) => s + calcularTotalInversion(i), 0);
+    const realizadoDe = i => realizadoPorOperacion[inversiones.indexOf(i)] || 0;
+    const mesesConDatos = lista.map(i => (i.fecha || '').substring(0, 7)).sort();
+    const primero = nombreHojaMes(mesesConDatos[0]);
+    const ultimo = nombreHojaMes(mesesConDatos[mesesConDatos.length - 1]);
+
+    hoja.anadir([{ v: 'Inversiones del periodo', estilo: 'titulo' }]);
+    hoja.anadir([{ v: `Generado el ${formatoFechaES(obtenerFechaHoy())} con Gestor de Gastos · ${primero === ultimo ? primero : `De ${primero} a ${ultimo}`} · ${lista.length} ${lista.length === 1 ? 'operación' : 'operaciones'}`, estilo: 'nota' }]);
+    hoja.anadir([{ v: 'Las posiciones y su valor actual solo se incluyen al exportar todo el historial.', estilo: 'nota' }]);
+    hoja.anadir([]);
+    cifrasClaveExcel(hoja, [
+        { etiqueta: 'Aportado', valor: { v: aportado, tipo: 'dinero' } },
+        { etiqueta: 'Vendido', valor: { v: vendido, tipo: 'dinero' } },
+        { etiqueta: 'Neto', valor: { v: aportado - vendido, tipo: 'dineroSigno' } },
+        { etiqueta: 'Beneficio realizado', valor: { v: lista.reduce((s, i) => s + realizadoDe(i), 0), tipo: 'dineroSigno' } }
+    ]);
+
+    bloqueAportaciones(hoja, lista, { col: 9, fila: 3, ancho: 8, alto: 16 });
+
+    const ventas = {};
+    lista.filter(esVenta).forEach(i => {
+        const nombre = i.nombre || 'Sin nombre';
+        ventas[nombre] = ventas[nombre] || { operaciones: 0, recibido: 0, beneficio: 0 };
+        ventas[nombre].operaciones++;
+        ventas[nombre].recibido += calcularTotalInversion(i);
+        ventas[nombre].beneficio += realizadoDe(i);
+    });
+    if (Object.keys(ventas).length) {
+        hoja.anadir([]);
+        hoja.anadir([{ v: 'Ventas y beneficio realizado', estilo: 'seccion' }]);
+        filaCabeceraExcel(hoja, ['Activo', 'Ventas', 'Recibido', 'Beneficio'], 1);
+        Object.entries(ventas).forEach(([nombre, v]) => hoja.anadir([{ v: nombre }, { v: v.operaciones, tipo: 'numero' }, { v: v.recibido, tipo: 'dinero' }, { v: v.beneficio, tipo: 'dineroSigno' }]));
+    }
+    return hoja;
+}
+
 function hojaTotalInversiones(posiciones, realizadoPorOperacion) {
     const hoja = new Hoja('Total');
     hoja.anchos = [30, 15, 10, 16, 12, 14, 14, 15, 13, 10, 3];
@@ -770,29 +840,7 @@ function hojaTotalInversiones(posiciones, realizadoPorOperacion) {
         });
     }
 
-    // Aportaciones y ventas mes a mes
-    const meses = [];
-    const fechas = inversiones.map(i => (i.fecha || '').substring(0, 7)).filter(m => /^\d{4}-\d{2}$/.test(m)).sort();
-    if (fechas.length) for (let m = fechas[0]; m <= fechas[fechas.length - 1]; m = sumarMeses(m, 1)) meses.push(m);
-    if (meses.length) {
-        hoja.anadir([]);
-        hoja.anadir([{ v: 'Aportaciones por mes', estilo: 'seccion' }]);
-        const cab = filaCabeceraExcel(hoja, ['Mes', 'Aportado', 'Vendido', 'Neto'], 1);
-        const datos = meses.map(m => {
-            const delMes = inversiones.filter(i => (i.fecha || '').startsWith(m));
-            return { mes: m, aportado: delMes.filter(i => !esVenta(i)).reduce((s, i) => s + calcularTotalInversion(i), 0), vendido: delMes.filter(esVenta).reduce((s, i) => s + calcularTotalInversion(i), 0) };
-        });
-        datos.forEach(d => {
-            const f = hoja.filaActual + 1;
-            hoja.anadir([{ v: nombreHojaMes(d.mes) }, { v: d.aportado, tipo: 'dinero' }, { v: d.vendido, tipo: 'dinero' }, { f: `B${f}-C${f}`, v: d.aportado - d.vendido, tipo: 'dineroSigno' }]);
-        });
-        const pm = cab + 1, um = hoja.filaActual;
-        hoja.anadir([{ v: 'Total', estilo: 'total' }, { f: `SUM(B${pm}:B${um})`, v: aportado, tipo: 'dinero', estilo: 'total' }, { f: `SUM(C${pm}:C${um})`, v: vendido, tipo: 'dinero', estilo: 'total' }, { f: `SUM(D${pm}:D${um})`, v: aportado - vendido, tipo: 'dineroSigno', estilo: 'total' }]);
-        const series = [{ nombre: 'Aportado', rango: `B${pm}:B${um}`, valores: datos.map(d => d.aportado), color: COLORES_GRAFICO[0] }];
-        if (vendido > 0) series.push({ nombre: 'Vendido', rango: `C${pm}:C${um}`, valores: datos.map(d => d.vendido), color: COLORES_GRAFICO[2] });
-        hoja.graficos.push({ tipo: 'columnas', titulo: 'Aportaciones por mes', ancla: { col: 11, fila: 38, ancho: 8, alto: 16 }, sinLeyenda: series.length === 1,
-            categorias: { rango: `A${pm}:A${um}`, valores: datos.map(d => nombreHojaMes(d.mes)) }, series });
-    }
+    bloqueAportaciones(hoja, inversiones, { col: 11, fila: 38, ancho: 8, alto: 16 });
 
     // Evolución de la cartera (puntos guardados cada día que se vio la cartera valorada)
     if (historicoValor.length >= 2) {
@@ -865,24 +913,23 @@ function hojaMesInversiones(mes, lista, realizadoPorOperacion) {
     return hoja;
 }
 
-export function generarExcelInversiones() {
-    const hojas = hojasExcelInversiones();
-    return hojas ? crearLibroExcel(hojas) : null;
-}
-
-// Hojas del Excel de inversiones (también se usan en el Excel conjunto de gastos e inversiones)
-export function hojasExcelInversiones() {
-    if (inversiones.length === 0) return null;
+// Hojas del Excel de inversiones. rango: { desde, hasta } en AAAA-MM; sin rango, todo el historial
+export function hojasExcelInversiones(rango = null) {
+    const lista = inversiones.filter(i => enRangoDeMeses(i.fecha, rango));
+    if (lista.length === 0) return null;
+    // El beneficio de cada venta depende de las compras anteriores: se calcula siempre con todo el historial
     const realizadoPorOperacion = {};
     const posiciones = calcularPosiciones(inversiones, realizadoPorOperacion);
 
-    const total = hojaTotalInversiones(posiciones, realizadoPorOperacion);
+    const total = lista.length < inversiones.length
+        ? hojaPeriodoInversiones(lista, realizadoPorOperacion)
+        : hojaTotalInversiones(posiciones, realizadoPorOperacion);
     const operaciones = new Hoja('Operaciones');
     operaciones.anchos = [12, 10, 30, 15, 10, 11, 12, 12, 13, 15];
     operaciones.congelarFilas = 1;
-    listaOperaciones(operaciones, inversiones, realizadoPorOperacion);
+    listaOperaciones(operaciones, lista, realizadoPorOperacion);
 
-    const porMes = agruparPorMes(inversiones).filter(g => g.mes !== 'sin-fecha').map(g => hojaMesInversiones(g.mes, g.elementos, realizadoPorOperacion));
+    const porMes = agruparPorMes(lista).filter(g => g.mes !== 'sin-fecha').map(g => hojaMesInversiones(g.mes, g.elementos, realizadoPorOperacion));
     return [total, operaciones, ...porMes];
 }
 

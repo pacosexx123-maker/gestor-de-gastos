@@ -19,8 +19,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=35">
-    <link rel="manifest" href="manifest.json?v=35">
+    <link rel="stylesheet" href="css/style.css?v=36">
+    <link rel="manifest" href="manifest.json?v=36">
 </head>
 <body>
 
@@ -379,9 +379,46 @@
       <div id="seccion-archivos" class="seccion oculto">
 
         <div class="cabecera-seccion">
-            <span class="mes-etiqueta">Registro</span>
-            <h1 class="titulo-mes">Archivos exportados</h1>
+            <span class="mes-etiqueta">Exportar y descargar</span>
+            <h1 class="titulo-mes">Archivos</h1>
         </div>
+
+        <section class="tarjeta">
+            <div class="cabecera-tarjeta estatica">
+                <div class="cabecera-tarjeta-titulo">
+                    <div>
+                        <b>Exportar a Excel</b>
+                        <small>Elige qué datos quieres y de qué fechas</small>
+                    </div>
+                </div>
+            </div>
+            <div class="exportar-formulario">
+                <div class="grupo-input">
+                    <label>Qué exportar</label>
+                    <div class="control-segmentado control-ancho" id="exportar-tipo" role="group" aria-label="Qué exportar">
+                        <button type="button" data-valor="gastos">Gastos</button>
+                        <button type="button" data-valor="inversiones">Inversiones</button>
+                        <button type="button" data-valor="todo">Ambos</button>
+                    </div>
+                </div>
+                <div class="grupo-input">
+                    <label>Fechas</label>
+                    <div class="chips" id="exportar-periodo" role="group" aria-label="Fechas"></div>
+                </div>
+                <div class="exportar-meses oculto" id="exportar-meses">
+                    <div class="grupo-input">
+                        <label for="exportar-desde">Desde</label>
+                        <select id="exportar-desde"></select>
+                    </div>
+                    <div class="grupo-input">
+                        <label for="exportar-hasta">Hasta</label>
+                        <select id="exportar-hasta"></select>
+                    </div>
+                </div>
+                <p id="exportar-resumen" class="exportar-resumen" aria-live="polite"></p>
+                <button type="button" id="btn-exportar-excel" class="btn-guardar">Exportar a Excel</button>
+            </div>
+        </section>
 
         <section class="tarjeta">
             <div class="cabecera-tarjeta" id="cabecera-archivos">
@@ -496,13 +533,20 @@
 
         <!-- Copia de seguridad -->
         <section class="tarjeta tarjeta-ajustes">
-            <h2 class="titulo-ajustes">Copia de seguridad</h2>
+            <h2 class="titulo-ajustes">Copia de seguridad e importación</h2>
             <div class="ajuste-fila">
                 <div class="ajuste-texto">
                     <b id="ajuste-ultima-copia">Aún no has hecho ninguna copia</b>
                     <small>Cifrada con tu contraseña y enviada a donde elijas</small>
                 </div>
                 <button type="button" id="btn-copia-ahora" class="btn-secundario">Hacer copia ahora</button>
+            </div>
+            <div class="ajuste-fila">
+                <div class="ajuste-texto">
+                    <b>Importar datos</b>
+                    <small>Restaura una copia de seguridad o añade un extracto del banco u órdenes del bróker</small>
+                </div>
+                <button type="button" id="btn-importar-json" class="btn-secundario">Importar</button>
             </div>
             <div class="ajuste-fila">
                 <div class="ajuste-texto">
@@ -579,6 +623,7 @@
 
     <!-- Barra de navegación inferior -->
     <nav class="barra-navegacion">
+        <span class="nav-indicador" aria-hidden="true"></span>
         <button type="button" class="nav-item" data-seccion="resumen" aria-label="Resumen" title="Resumen">
             <svg viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><polyline points="9 21 9 13 15 13 15 21"/></svg>
             <span>Resumen</span>
@@ -601,25 +646,6 @@
         </button>
     </nav>
 
-    <!-- Botón de datos (lado opuesto al +): exportar, copia de seguridad e importar -->
-    <button id="btn-menu-datos" class="btn-flotante btn-datos" title="Exportar, copia e importar" aria-haspopup="true" aria-expanded="false" aria-controls="menu-datos">
-        <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-        <span>Datos</span>
-    </button>
-    <div id="menu-datos" class="menu-datos oculto" role="menu" aria-label="Exportar, copia e importar">
-        <button type="button" id="btn-exportar" class="menu-opcion" role="menuitem">
-            <span class="menu-icono"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
-            <span class="menu-texto"><b id="titulo-exportar">Exportar a Excel (solo gastos)</b><small id="texto-exportar-seccion">Gastos (.xlsx)</small></span>
-        </button>
-        <button type="button" id="btn-exportar-json" class="menu-opcion" role="menuitem">
-            <span class="menu-icono"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
-            <span class="menu-texto"><b>Copia de seguridad</b><small>Cifrada, para guardarla o enviártela</small></span>
-        </button>
-        <button type="button" id="btn-importar-json" class="menu-opcion" role="menuitem">
-            <span class="menu-icono"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
-            <span class="menu-texto"><b>Importar</b><small>Copia, extracto del banco u órdenes del bróker</small></span>
-        </button>
-    </div>
     <input type="file" id="input-archivo-json" class="input-archivo-oculto" accept=".json,.csv,.xlsx,.xls,.txt,application/json,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
 
     <!-- Botón flotante (abre el formulario de la sección activa) -->
@@ -1134,6 +1160,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=35"></script>
+    <script type="module" src="js/main.js?v=36"></script>
 </body>
 </html>
