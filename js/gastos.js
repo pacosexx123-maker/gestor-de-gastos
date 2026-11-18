@@ -2,22 +2,21 @@
 // (gastos que van aparte, como "Hogar"), gráficos, historial con filtros,
 // formulario (con notas y repetición mensual), duplicar y deshacer.
 
-import { leerDato, guardarDato } from './datos.js?v=37';
+import { leerDato, guardarDato } from './datos.js?v=38';
 import {
     obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesCorto, nombreMesLargo, formatoFechaES,
     formatoNumero, formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=37';
-import { agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=37';
-import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=37';
-import { crearRecurrente } from './recurrentes.js?v=37';
-import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=37';
-import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=37';
-import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=37';
-import { conectarFilasDeslizables } from './filas-deslizables.js?v=37';
-import { etiquetaDia, enRangoDeMeses } from './utils.js?v=37';
+} from './utils.js?v=38';
+import { agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=38';
+import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=38';
+import { crearRecurrente } from './recurrentes.js?v=38';
+import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=38';
+import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=38';
+import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=38';
+import { conectarFilasDeslizables } from './filas-deslizables.js?v=38';
+import { etiquetaDia, enRangoDeMeses } from './utils.js?v=38';
 
 const ICONO = {
-    editar: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
     eliminar: '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
     duplicar: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
     hogar: '<svg viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
@@ -287,7 +286,7 @@ function colorSerieCategoria(nombre) {
 
 const colorMovimiento = m => esIngreso(m) ? 'var(--ingreso)' : colorSerieCategoria(m.categoria || 'Otros');
 
-// Un movimiento: deslizándolo hacia la izquierda aparecen "Editar" y "Eliminar" (tocarlo también lo edita)
+// Un movimiento: al tocarlo se edita y deslizándolo hacia la izquierda aparece "Eliminar"
 function filaMovimiento(m, indice) {
     const apartado = m.apartado ? apartadoPorId(m.apartado) : null;
     const nombreCategoria = !apartado || (m.categoria && m.categoria !== apartado.nombre) ? m.categoria || 'Otros' : '';
@@ -295,10 +294,9 @@ function filaMovimiento(m, indice) {
     return `
         <div class="mov" data-indice="${indice}">
             <div class="mov-acciones">
-                <button type="button" class="mov-accion mov-accion-editar" data-accion="editar" data-indice="${indice}" tabindex="-1">${ICONO.editar}<span>Editar</span></button>
                 <button type="button" class="mov-accion mov-accion-eliminar" data-accion="eliminar" data-indice="${indice}" tabindex="-1">${ICONO.eliminar}<span>Eliminar</span></button>
             </div>
-            <button type="button" class="mov-fila" title="Editar (desliza a la izquierda para ver más opciones)">
+            <button type="button" class="mov-fila" title="Editar (desliza a la izquierda para eliminar)">
                 <span class="mov-punto" style="background:${colorMovimiento(m)}"></span>
                 <span class="mov-texto">
                     <b>${escaparHTML(m.concepto || 'Sin concepto')}</b>
@@ -337,7 +335,6 @@ function conectarAcciones(contenedor) {
     conectarFilasDeslizables(contenedor, {
         alTocar: indice => { ayudas.cerrarModal(modalDetalle); abrirFormularioGasto({ indice }); },
         alAccion: (accion, indice) => {
-            if (accion === 'editar') { ayudas.cerrarModal(modalDetalle); abrirFormularioGasto({ indice }); }
             if (accion === 'eliminar') eliminarMovimiento(indice);
         }
     });

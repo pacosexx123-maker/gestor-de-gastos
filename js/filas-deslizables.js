@@ -1,21 +1,21 @@
-// Filas que se deslizan hacia la izquierda para mostrar sus acciones (historial de gastos,
+// Filas que se deslizan hacia la izquierda para mostrar "Eliminar" (historial de gastos,
 // desglose y operaciones de inversión). Estructura de cada fila:
 //
 //   <div class="mov" data-indice="3">
-//       <div class="mov-acciones"> <button class="mov-accion" data-accion="editar" data-indice="3"> … </div>
+//       <div class="mov-acciones"> <button class="mov-accion" data-accion="eliminar" data-indice="3"> … </div>
 //       <button class="mov-fila"> … </button>
 //   </div>
 //
-// Al deslizar, la fila se mueve y los botones de debajo aparecen poco a poco. Tocar la fila
+// Al deslizar, la fila se mueve y el botón de debajo aparece poco a poco. Tocar la fila
 // (sin deslizar) llama a alTocar; si estaba abierta, se cierra.
 
-const ANCHO_ACCIONES = 152; // dos botones de 76 px
+const ANCHO_ACCIONES = 76; // el botón "Eliminar"
 
 function moverFila(mov, desplazamiento, conTransicion) {
     const fila = mov.querySelector('.mov-fila');
     fila.style.transition = conTransicion ? '' : 'none';
     fila.style.transform = desplazamiento ? `translateX(${desplazamiento}px)` : '';
-    // Los botones aparecen poco a poco según se desliza (0 = ocultos, 1 = del todo)
+    // El botón aparece poco a poco según se desliza (0 = oculto, 1 = del todo)
     mov.style.setProperty('--progreso', Math.min(1, -desplazamiento / ANCHO_ACCIONES).toFixed(3));
 }
 
@@ -55,7 +55,7 @@ function conectarFila(mov, alTocar) {
             cerrarFilasAbiertas(mov);
             try { fila.setPointerCapture(e.pointerId); } catch (error) { /* sin captura */ }
         }
-        // Hacia la izquierda hasta el ancho de los botones (y un poco más, frenando); hacia la derecha, nada
+        // Hacia la izquierda hasta el ancho del botón (y un poco más, frenando); hacia la derecha, nada
         let x = gesto.inicio + dx;
         if (x < -ANCHO_ACCIONES) x = -ANCHO_ACCIONES + (x + ANCHO_ACCIONES) * 0.3;
         gesto.desplazamiento = Math.min(0, x);
@@ -81,7 +81,7 @@ function conectarFila(mov, alTocar) {
     });
 }
 
-// alTocar(indice): tocar la fila · alAccion(accion, indice): pulsar uno de sus botones
+// alTocar(indice): tocar la fila · alAccion(accion, indice): pulsar su botón
 export function conectarFilasDeslizables(contenedor, { alTocar, alAccion }) {
     contenedor.querySelectorAll('.mov').forEach(mov => conectarFila(mov, alTocar));
     contenedor.querySelectorAll('.mov-accion[data-accion]').forEach(boton => boton.addEventListener('click', () => {
