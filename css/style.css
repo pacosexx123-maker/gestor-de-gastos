@@ -596,25 +596,6 @@ svg {
     border-radius: 999px;
     box-shadow: var(--sombra-lg);
 }
-.nav-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    height: 42px;
-    padding: 0 18px;
-    border: none;
-    border-radius: 999px;
-    background: transparent;
-    color: var(--texto-secundario);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-}
-.nav-item:hover { color: var(--texto-principal); }
-.nav-item.activo { background: var(--superficie-2); color: var(--texto-principal); font-weight: 600; }
-.nav-item svg { width: 18px; height: 18px; }
-
 .acciones-fila { display: flex; gap: 4px; justify-content: flex-end; }
 
 .btn-editar,
@@ -868,33 +849,7 @@ input:focus, select:focus {
     .tabla-historial td:nth-child(3) { display: none; }
     .categoria-movil { display: inline-block; margin-top: 4px; }
 
-    /* Barra inferior a todo el ancho; el botón + flota encima, a la derecha */
     body { padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
-    .barra-navegacion {
-        left: 0;
-        right: 0;
-        bottom: 0;
-        transform: none;
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0;
-        padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-        border-radius: 0;
-        border-width: 1px 0 0 0;
-        box-shadow: 0 -4px 16px -6px rgba(16, 24, 40, 0.1);
-    }
-    .nav-item {
-        flex-direction: column;
-        justify-content: center;
-        gap: 3px;
-        height: 52px;
-        padding: 0;
-        border-radius: var(--radio);
-        font-size: 11px;
-    }
-    .nav-item.activo { background: transparent; color: var(--texto-principal); }
-    .nav-item.activo svg { color: var(--acento); }
-    .nav-item svg { width: 22px; height: 22px; }
 
     .toast.mostrar { bottom: calc(150px + env(safe-area-inset-bottom)); }
 
@@ -1350,7 +1305,6 @@ input:focus, select:focus {
 .btn-peligro-suave { color: var(--texto-secundario); }
 
 @media (max-width: 560px) {
-    .barra-navegacion { grid-template-columns: repeat(4, 1fr); }
     .titulo-ajustes { padding: 14px 16px 4px; }
     .ajuste-fila { padding: 14px 16px; flex-direction: column; align-items: stretch; gap: 10px; }
     .control-segmentado { display: flex; }
@@ -1359,19 +1313,7 @@ input:focus, select:focus {
     .ajuste-fila > .btn-secundario { align-self: flex-start; }
 }
 
-/* =========================================================
-   Botón de datos (lado opuesto al +) y su menú
-   ========================================================= */
-.btn-datos {
-    right: auto;
-    left: max(28px, calc((100vw - 960px) / 2 + 20px));
-    background: var(--superficie);
-    color: var(--texto-principal);
-    border: 1px solid var(--borde);
-}
-.btn-datos svg { stroke-width: 2; transition: transform 0.2s; }
-.btn-datos.abierto svg { transform: rotate(90deg); }
-
+/* Selector de archivo para importar (se abre desde Ajustes) */
 .input-archivo-oculto {
     position: fixed;
     left: -9999px;
@@ -1381,92 +1323,19 @@ input:focus, select:focus {
     pointer-events: none;
 }
 
-.menu-datos {
-    position: fixed;
-    z-index: 950;
-    left: max(28px, calc((100vw - 960px) / 2 + 20px));
-    bottom: 92px;
-    width: 300px;
-    padding: 6px;
-    background: var(--superficie);
-    border: 1px solid var(--borde);
-    border-radius: var(--radio-lg);
-    box-shadow: var(--sombra-lg);
-    animation: aparecerMenu 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-    transform-origin: bottom left;
-}
-@keyframes aparecerMenu { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } }
-.menu-opcion {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    padding: 10px;
-    border: none;
-    border-radius: var(--radio-sm);
-    background: transparent;
-    color: var(--texto-principal);
-    text-align: left;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-.menu-opcion:hover, .menu-opcion:focus-visible { background: var(--superficie-2); outline: none; }
-.menu-icono {
-    width: 36px;
-    height: 36px;
-    flex-shrink: 0;
-    border-radius: var(--radio-sm);
-    background: var(--superficie-2);
-    color: var(--texto-secundario);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-.menu-icono svg { width: 18px; height: 18px; }
-.menu-texto { min-width: 0; display: flex; flex-direction: column; }
-.menu-texto b { font-size: 14px; font-weight: 600; }
-.menu-texto small { font-size: 12px; color: var(--texto-terciario); margin-top: 1px; }
-
 /* Selector "Títulos y precio" / "Solo importe" a todo el ancho */
 .control-ancho { display: flex; }
 .control-ancho button { flex: 1; }
 
 /* =========================================================
-   Móvil: barra inferior flotante (solo iconos) con los dos botones a los lados
+   Móvil: barra inferior flotante con el botón + a un lado
    ========================================================= */
 @media (max-width: 600px) {
     body { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
 
-    .barra-navegacion {
-        left: 50%;
-        right: auto;
+    .btn-flotante {
         bottom: calc(14px + env(safe-area-inset-bottom));
-        transform: translateX(-50%);
-        display: flex;
-        grid-template-columns: none;
-        gap: 2px;
-        padding: 5px;
-        border-radius: 999px;
-        border-width: 1px;
-        box-shadow: var(--sombra-lg);
-    }
-    .nav-item {
-        flex-direction: row;
-        width: 46px;
-        height: 46px;
-        padding: 0;
-        gap: 0;
-        justify-content: center;
-        border-radius: 999px;
-    }
-    .nav-item span { display: none; }
-    .nav-item svg { width: 21px; height: 21px; }
-    .nav-item.activo { background: var(--superficie-2); color: var(--texto-principal); }
-    .nav-item.activo svg { color: var(--texto-principal); }
-
-    .btn-flotante,
-    .btn-flotante.btn-datos {
-        bottom: calc(14px + env(safe-area-inset-bottom));
+        right: 16px;
         width: 56px;
         height: 56px;
         padding: 0;
@@ -1474,28 +1343,15 @@ input:focus, select:focus {
         border-radius: 50%;
         transform: none;
     }
-    .btn-flotante { right: 16px; }
-    .btn-flotante.btn-datos { left: 16px; right: auto; }
     .btn-flotante span { display: none; }
-
-    .menu-datos {
-        left: 16px;
-        right: 16px;
-        width: auto;
-        max-width: 340px;
-        bottom: calc(82px + env(safe-area-inset-bottom));
-    }
 
     .toast.mostrar { bottom: calc(86px + env(safe-area-inset-bottom)); }
     .marca-nombre { display: inline; }
 }
 
-/* Pantallas muy estrechas: botones laterales algo más pequeños para que quepa la barra */
+/* Pantallas muy estrechas: botón + algo más pequeño para que quepa la barra */
 @media (max-width: 370px) {
-    .nav-item { width: 42px; height: 42px; }
-    .btn-flotante, .btn-flotante.btn-datos { width: 50px; height: 50px; }
-    .btn-flotante { right: 10px; }
-    .btn-flotante.btn-datos { left: 10px; }
+    .btn-flotante { width: 50px; height: 50px; right: 10px; }
 }
 
 /* Ventanas tipo hoja: barrita para arrastrar hacia abajo y cerrar */
@@ -1517,7 +1373,7 @@ input:focus, select:focus {
 @media (max-width: 560px) { .app-contenedor { padding-top: calc(20px + env(safe-area-inset-top)); } }
 #contenedor-archivos .lista-archivos { border-top: 1px solid var(--borde); }
 
-/* Modo oscuro: el botón + igual que el botón de datos (en lugar de blanco) */
+/* Modo oscuro: el botón + con el color de las tarjetas (en lugar de blanco) */
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .btn-flotante { background: var(--superficie); color: var(--texto-principal); border: 1px solid var(--borde); }
 }
@@ -1758,7 +1614,7 @@ textarea:focus { outline: none; border-color: var(--acento); box-shadow: 0 0 0 3
 .interruptor input:checked + span { background: var(--ingreso); }
 .interruptor input:checked + span::after { transform: translateX(18px); }
 
-html.bloqueada main, html.bloqueada .barra-navegacion, html.bloqueada .btn-flotante, html.bloqueada .menu-datos { visibility: hidden; }
+html.bloqueada main, html.bloqueada .barra-navegacion, html.bloqueada .btn-flotante { visibility: hidden; }
 .pantalla-bloqueo {
     position: fixed;
     inset: 0;
@@ -1832,23 +1688,9 @@ html.bloqueada main, html.bloqueada .barra-navegacion, html.bloqueada .btn-flota
     .presupuesto-edicion { grid-template-columns: 1fr 120px; }
     .cabecera-tarjeta-titulo small { font-size: 12px; }
 }
-@media (max-width: 600px) {
-    .nav-item { width: 42px; height: 42px; }
-    .nav-item svg { width: 20px; height: 20px; }
-}
-@media (max-width: 370px) {
-    .nav-item { width: 38px; height: 38px; }
-}
-
-/* Pantallas medianas: barra inferior solo con iconos para que no choque con los botones de los lados */
-@media (min-width: 601px) and (max-width: 900px) {
-    .nav-item { width: 46px; padding: 0; justify-content: center; }
-    .nav-item span { display: none; }
-}
-
-/* Ordenador: botones laterales redondos (solo icono) para dejar sitio a la barra con 5 pestañas */
+/* Ordenador: botón + redondo (solo icono) */
 @media (min-width: 601px) {
-    .btn-flotante, .btn-flotante.btn-datos { width: 52px; height: 52px; padding: 0; justify-content: center; border-radius: 50%; }
+    .btn-flotante { width: 52px; height: 52px; padding: 0; justify-content: center; border-radius: 50%; }
     .btn-flotante span { display: none; }
 }
 
@@ -1966,10 +1808,6 @@ body { font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
 .control-segmentado button { border-radius: 9px; font-weight: 600; }
 .control-segmentado button.activo { background: var(--segmento-activo); font-weight: 700; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
 #selector-tipo button { height: 40px; font-size: 14px; }
-
-/* Barra inferior: la pestaña activa en negro (en blanco con el modo oscuro) */
-.nav-item.activo, .nav-item.activo:hover { background: var(--primario); color: var(--primario-texto); }
-.nav-item.activo svg { color: inherit; }
 
 /* Ventanas tipo hoja */
 .modal-contenido { border: 0; border-radius: 24px; }
@@ -2211,3 +2049,91 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 440px) {
     .control-segmentado[data-grupo="inicio"] { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* =========================================================
+   Barra de navegación: la píldora se mueve de una pestaña a otra
+   --nav-pos: posición de la píldora (1,5 = entre la segunda y la tercera pestaña)
+   --activo: de 0 a 1, cuánto está activa cada pestaña. Las dos cambian poco a poco desde barra-navegacion.js
+   ========================================================= */
+.barra-navegacion {
+    --nav-pos: 1;
+    --nav-base: 58px;
+    --nav-extra: 30px;
+    --nav-alto: 50px;
+    --nav-hueco: 2px;
+    --nav-margen: 5px;
+    gap: var(--nav-hueco);
+    padding: var(--nav-margen);
+}
+.nav-indicador {
+    position: absolute;
+    top: var(--nav-margen);
+    left: var(--nav-margen);
+    width: calc(var(--nav-base) + var(--nav-extra));
+    height: var(--nav-alto);
+    border-radius: 18px;
+    background: var(--primario);
+    transform: translateX(calc(var(--nav-pos) * (var(--nav-base) + var(--nav-hueco))));
+    will-change: transform;
+}
+.nav-item {
+    --activo: 0;
+    position: relative;
+    z-index: 1;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(var(--nav-base) + var(--nav-extra) * var(--activo));
+    height: var(--nav-alto);
+    padding: 0;
+    border: 0;
+    border-radius: 18px;
+    background: transparent;
+    color: color-mix(in srgb, var(--primario-texto) calc(var(--activo) * 100%), var(--texto-secundario));
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.nav-item.activo:not([style]) { --activo: 1; } /* antes de que arranque el código */
+.nav-item svg { width: 21px; height: 21px; transform: translateY(calc(var(--activo) * -8px)); }
+.nav-item span {
+    position: absolute;
+    left: 50%;
+    bottom: 6px;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    opacity: calc((var(--activo) - 0.45) / 0.55); /* el nombre aparece en la segunda mitad del recorrido */
+    pointer-events: none;
+}
+.nav-item:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+@media (hover: hover) { .nav-item:not(.activo):hover { color: var(--texto-principal); } }
+
+@media (max-width: 600px) {
+    /* La barra se centra en el espacio que deja libre el botón + */
+    .barra-navegacion {
+        --nav-base: 42px;
+        --nav-alto: 46px;
+        left: calc(50% - 44px);
+        right: auto;
+        bottom: calc(14px + env(safe-area-inset-bottom));
+        transition: left 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .barra-navegacion.sin-flotante { left: 50%; }
+    .nav-item svg { width: 20px; height: 20px; }
+    .nav-item span { bottom: 5px; }
+}
+@media (max-width: 380px) { .barra-navegacion { --nav-base: 38px; } }
+@media (max-width: 370px) { .barra-navegacion { left: calc(50% - 35px); } }
+@media (max-width: 340px) { .barra-navegacion { --nav-base: 34px; } }
+@media (prefers-reduced-motion: reduce) { .barra-navegacion { transition: none; } }
+
+/* Archivos: formulario para exportar a Excel */
+.exportar-formulario { padding-top: 16px; }
+.exportar-meses { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.exportar-meses select { width: 100%; min-width: 0; }
+.exportar-resumen { margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--texto-secundario); font-variant-numeric: tabular-nums; }
+.exportar-formulario .btn-guardar { margin-top: 0; }

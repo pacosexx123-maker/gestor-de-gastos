@@ -2,19 +2,19 @@
 // (gastos que van aparte, como "Hogar"), gráficos, historial con filtros,
 // formulario (con notas y repetición mensual), duplicar y deshacer.
 
-import { leerDato, guardarDato } from './datos.js?v=35';
+import { leerDato, guardarDato } from './datos.js?v=36';
 import {
     obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesCorto, nombreMesLargo, formatoFechaES,
     formatoNumero, formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=35';
-import { crearLibroExcel, agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=35';
-import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=35';
-import { crearRecurrente } from './recurrentes.js?v=35';
-import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=35';
-import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=35';
-import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=35';
-import { conectarFilasDeslizables } from './filas-deslizables.js?v=35';
-import { etiquetaDia } from './utils.js?v=35';
+} from './utils.js?v=36';
+import { agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=36';
+import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=36';
+import { crearRecurrente } from './recurrentes.js?v=36';
+import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=36';
+import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=36';
+import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=36';
+import { conectarFilasDeslizables } from './filas-deslizables.js?v=36';
+import { etiquetaDia, enRangoDeMeses } from './utils.js?v=36';
 
 const ICONO = {
     editar: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
@@ -795,7 +795,7 @@ function tablaCategorias(hoja, lista, { titulo, tituloGrafico, ancla, meses }) {
 
 // --- HOJA "TOTAL": solo lo personal ---
 
-function hojaTotal(meses) {
+function hojaTotal(meses, lista) {
     const hoja = new Hoja('Total');
     hoja.anchos = [18, 15, 16, 15, 15, 3];
     hoja.anadir([{ v: 'Gastos e ingresos', estilo: 'titulo' }]);
@@ -851,13 +851,13 @@ function hojaTotal(meses) {
         series: [{ nombre: 'Ahorro', rango: `D${primera}:D${ultima}`, valores: datos.map(d => d.ingresos - d.gasto), color: COLORES_GRAFICO[0], colorNegativo: COLORES_GRAFICO[7] }]
     });
 
-    tablaCategorias(hoja, movimientos.filter(m => !m.apartado), {
+    tablaCategorias(hoja, lista.filter(m => !m.apartado), {
         titulo: 'Gasto personal por categoría', tituloGrafico: 'Gasto personal por categoría',
         ancla: { col: 6, fila: 37, ancho: 9, alto: 17 }, meses: datos.length
     });
 
     // Resumen de los apartados (su detalle está en su propia hoja)
-    const apartados = apartadosConDatos();
+    const apartados = apartadosConDatos(lista);
     if (apartados.length) {
         hoja.anadir([]);
         hoja.anadir([{ v: 'Apartados (van aparte, no suman al gasto personal)', estilo: 'seccion' }]);
@@ -874,15 +874,15 @@ function hojaTotal(meses) {
     return hoja;
 }
 
-function apartadosConDatos() {
+function apartadosConDatos(movimientosExportados) {
     return obtenerApartados()
-        .map(apartado => ({ apartado, lista: movimientos.filter(m => m.apartado === apartado.id) }))
+        .map(apartado => ({ apartado, lista: movimientosExportados.filter(m => m.apartado === apartado.id) }))
         .filter(a => a.lista.length);
 }
 
 // --- UNA HOJA POR APARTADO ---
 
-function hojaApartado(apartado, lista, meses) {
+function hojaApartado(apartado, lista, meses, parcial) {
     const hoja = new Hoja(apartado.nombre);
     // Las tablas usan las columnas A-E y la lista de movimientos A-G; las gráficas van a la derecha (columna I)
     hoja.anchos = [18, 14, 14, 16, 30, 24, 14, 3];
@@ -893,7 +893,7 @@ function hojaApartado(apartado, lista, meses) {
     const mesesApartado = meses.filter(m => m >= desde);
 
     hoja.anadir([{ v: apartado.nombre, estilo: 'titulo' }]);
-    hoja.anadir([{ v: `Apartado: va aparte y no se suma al gasto personal · ${apartado.acumulado ? 'En la app se muestra acumulado' : 'En la app se muestra mes a mes'} · Las devoluciones (p. ej. Bizum) se restan`, estilo: 'nota' }]);
+    hoja.anadir([{ v: `Apartado: va aparte y no se suma al gasto personal · ${apartado.acumulado ? 'En la app se muestra acumulado' : 'En la app se muestra mes a mes'} · Las devoluciones (p. ej. Bizum) se restan${parcial ? ' · El acumulado empieza en el primer mes exportado' : ''}`, estilo: 'nota' }]);
     hoja.anadir([]);
     const filaTotal = 3 + 2 + 1 + 1 + 1 + mesesApartado.length + 1;
     cifrasClave(hoja, [
@@ -997,29 +997,26 @@ function hojaMes(mes, lista) {
     return hoja;
 }
 
-export function generarExcelGastos() {
-    const hojas = hojasExcelGastos();
-    return hojas ? crearLibroExcel(hojas) : null;
-}
-
-// Hojas del Excel de gastos (también se usan en el Excel conjunto de gastos e inversiones)
-export function hojasExcelGastos() {
-    if (movimientos.length === 0) return null;
+// Hojas del Excel de gastos. rango: { desde, hasta } en AAAA-MM; sin rango, todo el historial
+export function hojasExcelGastos(rango = null) {
+    const lista = movimientos.filter(m => enRangoDeMeses(m.fecha, rango));
+    if (lista.length === 0) return null;
     // Todos los meses entre el primero y el último con movimientos (también los vacíos, para las gráficas)
-    const ordenados = movimientos.filter(m => /^\d{4}-\d{2}/.test(m.fecha || '')).map(mesDe).sort();
+    const ordenados = lista.filter(m => /^\d{4}-\d{2}/.test(m.fecha || '')).map(mesDe).sort();
     const meses = [];
     if (ordenados.length) for (let m = ordenados[0]; m <= ordenados[ordenados.length - 1]; m = sumarMeses(m, 1)) meses.push(m);
     if (!meses.length) meses.push(obtenerMesActual());
 
-    const total = hojaTotal(meses);
+    const total = hojaTotal(meses, lista);
     const todos = new Hoja('Movimientos');
-    const conSubcategoria = movimientos.some(m => m.subcategoria);
+    const conSubcategoria = lista.some(m => m.subcategoria);
     todos.anchos = conSubcategoria ? [12, 10, 14, 16, 30, 26, 14, 16] : [12, 10, 14, 16, 30, 26, 14];
     todos.congelarFilas = 1;
-    listaMovimientos(todos, movimientos, 'personal', conSubcategoria);
+    listaMovimientos(todos, lista, 'personal', conSubcategoria);
 
-    const porApartado = apartadosConDatos().map(({ apartado, lista }) => hojaApartado(apartado, lista, meses));
-    const porMes = agruparPorMes(movimientos).filter(g => g.mes !== 'sin-fecha').map(g => hojaMes(g.mes, g.elementos));
+    const parcial = lista.length < movimientos.length;
+    const porApartado = apartadosConDatos(lista).map(a => hojaApartado(a.apartado, a.lista, meses, parcial));
+    const porMes = agruparPorMes(lista).filter(g => g.mes !== 'sin-fecha').map(g => hojaMes(g.mes, g.elementos));
     return [total, todos, ...porApartado, ...porMes];
 }
 

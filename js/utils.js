@@ -26,6 +26,13 @@ export function diasDelMes(mes) {
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const MESES_LARGOS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
+// ¿La fecha cae dentro de los meses { desde, hasta } (AAAA-MM)? Sin rango, vale cualquiera
+export function enRangoDeMeses(fecha, rango) {
+    if (!rango) return true;
+    const mes = (fecha || '').substring(0, 7);
+    return !!mes && mes >= rango.desde && mes <= rango.hasta;
+}
+
 export function nombreMesCorto(mes) {
     return MESES_CORTOS[Number(mes.split('-')[1]) - 1];
 }
