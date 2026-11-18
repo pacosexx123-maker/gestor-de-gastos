@@ -2,19 +2,20 @@
 // (gastos que van aparte, como "Hogar"), gráficos, historial con filtros,
 // formulario (con notas y repetición mensual), duplicar y deshacer.
 
-import { leerDato, guardarDato } from './datos.js?v=40';
+import { leerDato, guardarDato } from './datos.js?v=41';
 import {
     obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesCorto, nombreMesLargo, formatoFechaES,
     formatoNumero, formatoEuros, formatoPorcentaje, escaparHTML, leerImporte
-} from './utils.js?v=40';
-import { agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=40';
-import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=40';
-import { crearRecurrente } from './recurrentes.js?v=40';
-import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=40';
-import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=40';
-import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=40';
-import { conectarFilasDeslizables } from './filas-deslizables.js?v=40';
-import { etiquetaDia, enRangoDeMeses } from './utils.js?v=40';
+} from './utils.js?v=41';
+import { agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=41';
+import { obtenerCategorias, obtenerApartados, apartadoPorId, asegurarCategoria, asegurarApartado, abrirConfiguracion } from './configuracion.js?v=41';
+import { crearRecurrente } from './recurrentes.js?v=41';
+import { buscarRegla, aprenderRegla, iniciarReglas } from './reglas.js?v=41';
+import { dibujarTarta, conectarInteraccion, agruparOtros, dibujarEvolucionMensual, conectarEvolucion } from './graficos.js?v=41';
+import { chipsDesdeSelect, atajosFecha } from './selectores.js?v=41';
+import { conectarFilasDeslizables } from './filas-deslizables.js?v=41';
+import { etiquetaDia, enRangoDeMeses } from './utils.js?v=41';
+import { iconoCategoria } from './iconos-categoria.js?v=41';
 
 const ICONO = {
     eliminar: '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
@@ -297,7 +298,7 @@ function filaMovimiento(m, indice) {
                 <button type="button" class="mov-accion mov-accion-eliminar" data-accion="eliminar" data-indice="${indice}" tabindex="-1">${ICONO.eliminar}<span>Eliminar</span></button>
             </div>
             <button type="button" class="mov-fila" title="Editar (desliza a la izquierda para eliminar)">
-                <span class="mov-punto" style="background:${colorMovimiento(m)}"></span>
+                <span class="mov-icono" style="--color-categoria:${colorMovimiento(m)}" aria-hidden="true">${iconoCategoria(m.categoria || 'Otros')}</span>
                 <span class="mov-texto">
                     <b>${escaparHTML(m.concepto || 'Sin concepto')}</b>
                     <small>${categoria}${apartado ? `<span class="pildora pildora-apartado">${escaparHTML(apartado.nombre)}</span>` : ''}${m.recurrenteId ? `<span class="pildora pildora-recurrente" title="Se repite cada mes">${ICONO.repetir}</span>` : ''}</small>
