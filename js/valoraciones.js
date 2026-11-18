@@ -8,7 +8,8 @@
 //   'rentabilidad' -> % de rentabilidad (valor = invertido × (1 + %/100)); se guarda el %,
 //                     así las aportaciones nuevas no aparecen como pérdida
 
-import { formatoNumero, formatoEuros, formatoDecimalVariable } from './utils.js?v=38';
+import { guardarTexto } from './datos.js?v=39';
+import { formatoNumero, formatoEuros, formatoDecimalVariable } from './utils.js?v=39';
 
 const modalValor = document.getElementById('modal-valor');
 const tituloValor = document.getElementById('valor-titulo');
@@ -34,7 +35,7 @@ function cargar() {
 }
 
 function guardar() {
-    localStorage.setItem('valoraciones', JSON.stringify(valoraciones));
+    guardarTexto('valoraciones', JSON.stringify(valoraciones));
     ayudas.alCambiar();
 }
 
@@ -44,7 +45,7 @@ export function obtenerValoraciones() {
 
 export function reemplazarValoraciones(datos) {
     valoraciones = datos && typeof datos === 'object' && !Array.isArray(datos) ? datos : {};
-    localStorage.setItem('valoraciones', JSON.stringify(valoraciones));
+    guardarTexto('valoraciones', JSON.stringify(valoraciones));
 }
 
 // Valor actual de una posición, o null si no está valorada

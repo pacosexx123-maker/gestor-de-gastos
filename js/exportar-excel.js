@@ -1,11 +1,11 @@
 // Formulario "Exportar a Excel" de la pestaña Archivos: qué datos (gastos, inversiones o ambos)
 // y de qué fechas (este mes, los últimos meses, este año, todo o los meses que se elijan).
 
-import { obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesLargo, descargarArchivo, enRangoDeMeses } from './utils.js?v=38';
-import { bytesABase64, crearLibroExcel, MIME_EXCEL } from './excel.js?v=38';
-import { obtenerMovimientos, hojasExcelGastos } from './gastos.js?v=38';
-import { obtenerInversiones, hojasExcelInversiones } from './inversiones.js?v=38';
-import { registrarExportacion } from './exportaciones.js?v=38';
+import { obtenerFechaHoy, obtenerMesActual, sumarMeses, nombreMesLargo, descargarArchivo, enRangoDeMeses } from './utils.js?v=39';
+import { crearLibroExcel, MIME_EXCEL } from './excel.js?v=39';
+import { obtenerMovimientos, hojasExcelGastos } from './gastos.js?v=39';
+import { obtenerInversiones, hojasExcelInversiones } from './inversiones.js?v=39';
+import { registrarExportacion } from './exportaciones.js?v=39';
 
 const PERIODOS = [
     { id: 'mes', texto: 'Este mes', rango: mes => ({ desde: mes, hasta: mes }) },
@@ -130,8 +130,7 @@ function exportar() {
         tipo: tipoElegido,
         formato: 'XLSX',
         mime: MIME_EXCEL,
-        contenido: bytesABase64(libro),
-        codificacion: 'base64'
+        contenido: libro
     });
     ayudas.mostrarToast(TIPOS[tipoElegido].hecho);
 }

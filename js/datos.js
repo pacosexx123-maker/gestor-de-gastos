@@ -44,8 +44,19 @@ export function leerDato(nombre) {
     }
 }
 
+// Si el almacenamiento está lleno, avisa (main.js muestra el mensaje) en lugar de romper la app
+export function guardarTexto(clave, texto) {
+    try {
+        localStorage.setItem(clave, texto);
+        return true;
+    } catch (error) {
+        window.dispatchEvent(new CustomEvent('almacen-lleno'));
+        return false;
+    }
+}
+
 export function guardarDato(nombre, valor) {
-    localStorage.setItem(CLAVES[nombre], JSON.stringify(valor));
+    return guardarTexto(CLAVES[nombre], JSON.stringify(valor));
 }
 
 export function nuevoId() {

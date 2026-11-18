@@ -2,8 +2,8 @@
 // propio navegador), aviso periódico y envío con el menú de compartir del móvil.
 // Los datos solo salen del dispositivo cifrados y por la app que elija el usuario.
 
-import { obtenerFechaHoy, descargarArchivo } from './utils.js?v=38';
-import { bytesABase64, base64ABytes } from './excel.js?v=38';
+import { obtenerFechaHoy, descargarArchivo } from './utils.js?v=39';
+import { bytesABase64, base64ABytes } from './excel.js?v=39';
 
 const FORMATO_CIFRADO = 'gestor-gastos-cifrado';
 const ITERACIONES = 310000;
@@ -142,7 +142,7 @@ function cerrarModalCopia() {
 function copiaCompletada({ archivo, contenido, formato }) {
     escribir('ultimaCopia', new Date().toISOString());
     escribir('recordatorioPospuesto', null);
-    ayudas.registrarExportacion({ nombreArchivo: archivo.name, tipo: 'copia', formato, contenido, mime: 'application/json', codificacion: 'texto' });
+    ayudas.registrarExportacion({ nombreArchivo: archivo.name, tipo: 'copia', formato, contenido, mime: 'application/json' });
     abiertoComoRecordatorio = false;
     copiaAnticipada = null;
     ayudas.cerrarModal(modalCopia);

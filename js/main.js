@@ -1,30 +1,30 @@
 // Arranque de la app: navegación entre pestañas, avisos, ventanas, importar datos
 // y conexión entre los módulos.
 
-import { formatoFechaES } from './utils.js?v=38';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=38';
-import { iniciarExportarExcel, renderizarExportarExcel } from './exportar-excel.js?v=38';
-import { marcarPestana, moverBarra, animarBarra } from './barra-navegacion.js?v=38';
+import { formatoFechaES } from './utils.js?v=39';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=39';
+import { iniciarExportarExcel, renderizarExportarExcel } from './exportar-excel.js?v=39';
+import { marcarPestana, moverBarra, animarBarra } from './barra-navegacion.js?v=39';
 import {
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, reemplazarInversiones,
     anadirInversiones, obtenerHistoricoValor, reemplazarHistoricoValor
-} from './inversiones.js?v=38';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo, leerFilasArchivo, sonOrdenesDeBroker } from './importar-ordenes.js?v=38';
-import { iniciarImportacionBanco, importarBancoDesdeFilas } from './importar-banco.js?v=38';
-import { obtenerReglas, reemplazarReglas } from './reglas.js?v=38';
-import { iniciarCopiaSeguridad, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=38';
-import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=38';
-import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=38';
-import { iniciarAjustes, renderizarAjustes, aplicarTema } from './ajustes.js?v=38';
+} from './inversiones.js?v=39';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo, leerFilasArchivo, sonOrdenesDeBroker } from './importar-ordenes.js?v=39';
+import { iniciarImportacionBanco, importarBancoDesdeFilas } from './importar-banco.js?v=39';
+import { obtenerReglas, reemplazarReglas } from './reglas.js?v=39';
+import { iniciarCopiaSeguridad, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=39';
+import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=39';
+import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=39';
+import { iniciarAjustes, renderizarAjustes, aplicarTema } from './ajustes.js?v=39';
 import {
     iniciarGastos, abrirFormularioGasto, obtenerMovimientos, reemplazarMovimientos, anadirMovimientos,
     renombrarCategoriaEnMovimientos, quitarApartadoDeMovimientos,
     obtenerPresupuestos, reemplazarPresupuestos, renderizarGastos
-} from './gastos.js?v=38';
-import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=38';
-import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=38';
-import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=38';
-import { iniciarBloqueo } from './bloqueo.js?v=38';
+} from './gastos.js?v=39';
+import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=39';
+import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=39';
+import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=39';
+import { iniciarBloqueo } from './bloqueo.js?v=39';
 
 // --- AVISOS (con opción de deshacer) ---
 
@@ -44,6 +44,16 @@ function mostrarToast(mensaje, opciones = {}) {
     toast.classList.add('mostrar');
     temporizadorToast = setTimeout(() => toast.classList.remove('mostrar'), opciones.deshacer ? 6000 : 2500);
 }
+
+// --- ALMACENAMIENTO LLENO ---
+
+let ultimoAvisoLleno = 0;
+
+window.addEventListener('almacen-lleno', () => {
+    if (Date.now() - ultimoAvisoLleno < 10000) return; // una sola vez por cada acción
+    ultimoAvisoLleno = Date.now();
+    alert('No se ha podido guardar el último cambio porque el almacenamiento de la app está lleno.\n\nHaz ahora una copia de seguridad desde Ajustes para no perderlo.');
+});
 
 // --- VENTANAS ---
 
@@ -69,7 +79,7 @@ let seccionActiva = SECCIONES.includes(seccionGuardada) ? seccionGuardada : 'gas
 function cambiarSeccion(seccion, opciones = {}) {
     const anterior = seccionActiva;
     seccionActiva = seccion;
-    localStorage.setItem('seccionActiva', seccion);
+    try { localStorage.setItem('seccionActiva', seccion); } catch (error) { /* almacenamiento lleno */ }
     SECCIONES.forEach(s => document.getElementById(`seccion-${s}`).classList.toggle('oculto', s !== seccion));
 
     // La sección nueva entra desde el lado hacia el que se avanza

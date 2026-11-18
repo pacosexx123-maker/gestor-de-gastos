@@ -3,10 +3,11 @@
 import {
     abrirModalCopia, hayContrasenaGuardada, guardarContrasenaCopia,
     obtenerDiasRecordatorio, fijarDiasRecordatorio, describirUltimaCopia
-} from './copia-seguridad.js?v=38';
-import { formatoNumero } from './utils.js?v=38';
-import { CLAVES_ALMACEN } from './datos.js?v=38';
-import { abrirConfiguracion } from './configuracion.js?v=38';
+} from './copia-seguridad.js?v=39';
+import { formatoNumero } from './utils.js?v=39';
+import { CLAVES_ALMACEN } from './datos.js?v=39';
+import { abrirConfiguracion } from './configuracion.js?v=39';
+import { borrarTodosLosArchivos } from './almacen-archivos.js?v=39';
 
 const TEMAS = ['sistema', 'claro', 'oscuro'];
 const CLAVES_DATOS = [...CLAVES_ALMACEN, 'inversiones', 'carteras', 'valoraciones', 'exportaciones', 'ultimaCopia', 'recordatorioPospuesto',
@@ -80,6 +81,8 @@ export function renderizarAjustes() {
             bytes += (clave.length + (localStorage.getItem(clave) || '').length) * 2;
         }
     } catch (error) { /* sin acceso */ }
+    // Los archivos del historial se guardan aparte
+    bytes += exportaciones.reduce((total, exp) => total + (exp.guardado ? exp.tamano || 0 : 0), 0);
     const contar = (n, singular, plural) => `${n} ${n === 1 ? singular : plural}`;
     document.getElementById('ajuste-resumen-datos').textContent = [
         contar(datos.movimientos.length, 'movimiento', 'movimientos'),
@@ -125,11 +128,12 @@ function cambiarContrasena() {
     ayudas.mostrarToast('Contraseña guardada');
 }
 
-function borrarTodo() {
+async function borrarTodo() {
     if (!confirm('¿Borrar TODOS los datos de la app en este dispositivo? Gastos, inversiones, carteras y archivos exportados.\n\nAntes de seguir, asegúrate de tener una copia de seguridad.')) return;
     const confirmacion = prompt('Para confirmar, escribe BORRAR:');
     if (!confirmacion || confirmacion.trim().toUpperCase() !== 'BORRAR') return ayudas.mostrarToast('No se ha borrado nada');
     CLAVES_DATOS.forEach(clave => escribir(clave, null));
+    try { await borrarTodosLosArchivos(); } catch (error) { /* sin IndexedDB no hay archivos que borrar */ }
     location.reload();
 }
 

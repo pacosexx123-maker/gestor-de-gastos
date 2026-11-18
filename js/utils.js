@@ -1,3 +1,5 @@
+import { guardarTexto } from './datos.js?v=39';
+
 // --- FECHAS (siempre en hora local, no UTC) ---
 
 export function obtenerFechaHoy() {
@@ -71,7 +73,7 @@ export function cargarInversionesDesdeMemoria() {
 }
 
 export function guardarInversionesEnMemoria(listaInversiones) {
-    localStorage.setItem('inversiones', JSON.stringify(listaInversiones));
+    guardarTexto('inversiones', JSON.stringify(listaInversiones));
 }
 
 export function esVenta(inv) {

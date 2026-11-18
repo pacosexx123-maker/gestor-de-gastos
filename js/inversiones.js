@@ -3,19 +3,19 @@ import {
     calcularTotalInversion, calcularResumenPorActivo, calcularPosiciones, claveActivo, tieneDetalleTitulos, esVenta,
     formatoNumero, formatoEuros, formatoPorcentaje, formatoDecimalVariable, escaparHTML as escaparTexto, leerImporte,
     sumarMeses, formatoFechaES
-} from './utils.js?v=38';
-import { agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=38';
-import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=38';
-import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros, dibujarLineas } from './graficos.js?v=38';
+} from './utils.js?v=39';
+import { agruparPorMes, ordenarPorFecha, Hoja, ref, nombreHojaMes, COLORES_GRAFICO, COLOR_OTROS } from './excel.js?v=39';
+import { iniciarCarteras, carteraDeActivo, abrirModalCarteras, abrirEdicionCartera } from './carteras.js?v=39';
+import { dibujarTarta, dibujarBarras, conectarInteraccion, agruparOtros, dibujarLineas } from './graficos.js?v=39';
 import {
     iniciarValoraciones, abrirValorActual, valorActual, precioActual,
     rentabilidad, formatoRentabilidad, claseRentabilidad
-} from './valoraciones.js?v=38';
-import { leerDato, guardarDato } from './datos.js?v=38';
-import { crearRecurrente } from './recurrentes.js?v=38';
-import { atajosFecha, chipsDesdeSelect } from './selectores.js?v=38';
-import { conectarFilasDeslizables } from './filas-deslizables.js?v=38';
-import { etiquetaDia, enRangoDeMeses } from './utils.js?v=38';
+} from './valoraciones.js?v=39';
+import { leerDato, guardarDato } from './datos.js?v=39';
+import { crearRecurrente } from './recurrentes.js?v=39';
+import { atajosFecha, chipsDesdeSelect } from './selectores.js?v=39';
+import { conectarFilasDeslizables } from './filas-deslizables.js?v=39';
+import { etiquetaDia, enRangoDeMeses } from './utils.js?v=39';
 
 const ICONO_EDITAR = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICONO_DESPLEGAR = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';

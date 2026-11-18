@@ -1,5 +1,10 @@
-import { descargarArchivo, formatoNumero } from './utils.js?v=38';
-import { base64ABytes } from './excel.js?v=38';
+import { descargarArchivo, formatoNumero } from './utils.js?v=39';
+import { base64ABytes } from './excel.js?v=39';
+import { guardarTexto } from './datos.js?v=39';
+import { guardarArchivo, leerArchivo, borrarArchivo } from './almacen-archivos.js?v=39';
+
+// El registro (nombre, fecha, tamaño...) está en localStorage y el contenido de cada archivo, en IndexedDB.
+// Los archivos antiguos llevaban el contenido en el propio registro: al arrancar se trasladan.
 
 const ICONO_DESCARGAR = '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
 const ICONO_ELIMINAR = '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
@@ -26,14 +31,8 @@ function cargarExportaciones() {
     }
 }
 
-// Si la memoria del navegador se llena, se guarda el registro sin el contenido del archivo
 function guardarExportaciones() {
-    try {
-        localStorage.setItem('exportaciones', JSON.stringify(exportaciones));
-    } catch (error) {
-        if (exportaciones[0]) exportaciones[0].contenido = null;
-        try { localStorage.setItem('exportaciones', JSON.stringify(exportaciones)); } catch (e) { /* memoria llena */ }
-    }
+    guardarTexto('exportaciones', JSON.stringify(exportaciones));
 }
 
 function escaparHTML(texto) {
@@ -49,28 +48,83 @@ function formatoFechaHora(fechaISO) {
     return `${dia}/${mes}/${fecha.getFullYear()} · ${horas}:${minutos}`;
 }
 
-function bytesDelArchivo(exp) {
-    return exp.codificacion === 'base64' ? base64ABytes(exp.contenido) : exp.contenido;
+// Contenido de un archivo antiguo, guardado todavía dentro del registro
+function bytesAntiguos(exp) {
+    return exp.codificacion === 'base64' ? base64ABytes(exp.contenido) : new TextEncoder().encode(exp.contenido);
 }
 
-function formatoTamano(exp) {
-    const bytes = new Blob([bytesDelArchivo(exp)]).size;
+function tamanoEnBytes(exp) {
+    if (typeof exp.tamano === 'number') return exp.tamano;
+    try { return exp.contenido ? bytesAntiguos(exp).length : null; } catch (error) { return null; }
+}
+
+function formatoTamano(bytes) {
     return bytes < 1024 ? `${bytes} B` : `${formatoNumero(bytes / 1024, 1)} KB`;
 }
 
-export function registrarExportacion({ nombreArchivo, tipo, formato, contenido, mime, codificacion = 'texto' }) {
-    exportaciones.unshift({
+const estaDisponible = exp => !!exp.guardado || !!exp.contenido;
+
+// contenido: bytes (Excel) o texto (copia de seguridad)
+export function registrarExportacion({ nombreArchivo, tipo, formato, contenido, mime }) {
+    const bytes = contenido instanceof Uint8Array ? contenido : new TextEncoder().encode(contenido);
+    const exp = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         nombreArchivo,
         tipo,
         formato,
         fecha: new Date().toISOString(),
-        contenido,
-        codificacion,
+        tamano: bytes.length,
+        guardado: false,
         mime
-    });
+    };
+    exportaciones.unshift(exp);
     guardarExportaciones();
     renderizarExportaciones();
+
+    // El archivo ya se ha descargado: si aquí falla, solo queda sin poder volver a descargarse desde el historial
+    guardarArchivo(exp.id, bytes).then(() => {
+        if (!exportaciones.includes(exp)) return borrarArchivo(exp.id);
+        exp.guardado = true;
+        guardarExportaciones();
+        renderizarExportaciones();
+    }).catch(error => console.warn('No se ha podido guardar el archivo en el historial:', error));
+}
+
+// Pasa a IndexedDB los archivos antiguos. El original solo se quita tras comprobar que la copia está bien
+async function trasladarArchivosAntiguos() {
+    for (const exp of exportaciones.filter(e => e.contenido)) {
+        try {
+            const bytes = bytesAntiguos(exp);
+            await guardarArchivo(exp.id, bytes);
+            const copia = await leerArchivo(exp.id);
+            if (!copia || copia.length !== bytes.length || copia.some((byte, i) => byte !== bytes[i])) continue;
+            exp.guardado = true;
+            exp.tamano = bytes.length;
+            delete exp.contenido;
+            delete exp.codificacion;
+            guardarExportaciones();
+        } catch (error) {
+            console.warn('Archivo no trasladado (sigue donde estaba):', error);
+        }
+    }
+    renderizarExportaciones();
+}
+
+async function descargarDelHistorial(exp) {
+    let bytes = null;
+    try {
+        bytes = exp.guardado ? await leerArchivo(exp.id) : bytesAntiguos(exp);
+    } catch (error) {
+        return ayudas.mostrarToast('No se ha podido abrir el archivo');
+    }
+    if (!bytes) {
+        exp.guardado = false;
+        guardarExportaciones();
+        renderizarExportaciones();
+        return ayudas.mostrarToast('Este archivo ya no está disponible');
+    }
+    descargarArchivo(new Blob([bytes], { type: exp.mime }), exp.nombreArchivo);
+    ayudas.mostrarToast('Archivo descargado');
 }
 
 export function renderizarExportaciones() {
@@ -85,7 +139,8 @@ export function renderizarExportaciones() {
 
     exportaciones.forEach(exp => {
         const tipo = TIPOS[exp.tipo] || TIPOS.gastos;
-        const disponible = !!exp.contenido;
+        const disponible = estaDisponible(exp);
+        const tamano = tamanoEnBytes(exp);
         listaArchivos.innerHTML += `
             <div class="archivo-fila">
                 <span class="archivo-icono ${tipo.clase}">${ICONO_ARCHIVO}<em>${escaparHTML(exp.formato)}</em></span>
@@ -93,7 +148,7 @@ export function renderizarExportaciones() {
                     <b>${escaparHTML(exp.nombreArchivo)}</b>
                     <div class="archivo-meta">
                         <span class="pildora ${tipo.clase}">${tipo.etiqueta}</span>
-                        <small>${formatoFechaHora(exp.fecha)}${disponible ? ' · ' + formatoTamano(exp) : ''}</small>
+                        <small>${formatoFechaHora(exp.fecha)}${disponible && tamano !== null ? ' · ' + formatoTamano(tamano) : ''}</small>
                     </div>
                 </div>
                 <div class="acciones-fila">
@@ -106,16 +161,16 @@ export function renderizarExportaciones() {
     document.querySelectorAll('.btn-descargar-archivo').forEach(btn => {
         btn.addEventListener('click', function() {
             const exp = exportaciones.find(e => String(e.id) === this.getAttribute('data-id'));
-            if (!exp || !exp.contenido) return;
-            descargarArchivo(new Blob([bytesDelArchivo(exp)], { type: exp.mime }), exp.nombreArchivo);
-            ayudas.mostrarToast('Archivo descargado');
+            if (exp && estaDisponible(exp)) descargarDelHistorial(exp);
         });
     });
 
     document.querySelectorAll('.btn-eliminar-archivo').forEach(btn => {
         btn.addEventListener('click', function() {
-            exportaciones = exportaciones.filter(e => String(e.id) !== this.getAttribute('data-id'));
+            const id = this.getAttribute('data-id');
+            exportaciones = exportaciones.filter(e => String(e.id) !== id);
             guardarExportaciones();
+            borrarArchivo(id).catch(() => { /* sin IndexedDB no hay nada que borrar */ });
             renderizarExportaciones();
             ayudas.mostrarToast('Archivo eliminado del registro');
         });
@@ -133,4 +188,5 @@ export function iniciarExportaciones(funcionesAyuda) {
         flecha.style.transform = abierto ? 'rotate(180deg)' : 'rotate(0deg)';
     });
     renderizarExportaciones();
+    trasladarArchivosAntiguos();
 }
