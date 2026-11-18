@@ -5,22 +5,27 @@
     <link rel="apple-touch-icon" href="icono.png?v=3">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0e0f11" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#ffffff" data-original="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0e0f11" data-original="#0e0f11" media="(prefers-color-scheme: dark)">
     <title>Gestor de Gastos</title>
     <script>
         try {
             var tema = localStorage.getItem('tema');
             if (tema === 'claro') document.documentElement.setAttribute('data-theme', 'light');
             else if (tema === 'oscuro') document.documentElement.setAttribute('data-theme', 'dark');
+            // La barra del móvil toma el color del tema elegido desde el primer momento
+            if (tema === 'claro' || tema === 'oscuro') {
+                var metas = document.querySelectorAll('meta[name="theme-color"]');
+                for (var i = 0; i < metas.length; i++) metas[i].setAttribute('content', tema === 'claro' ? '#ffffff' : '#0e0f11');
+            }
             if (localStorage.getItem('bloqueo')) document.documentElement.classList.add('bloqueada');
         } catch (e) {}
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=39">
-    <link rel="manifest" href="manifest.json?v=39">
+    <link rel="stylesheet" href="css/style.css?v=40">
+    <link rel="manifest" href="manifest.json?v=40">
 </head>
 <body>
 
@@ -1160,6 +1165,6 @@
             });
         })();
     </script>
-    <script type="module" src="js/main.js?v=39"></script>
+    <script type="module" src="js/main.js?v=40"></script>
 </body>
 </html>

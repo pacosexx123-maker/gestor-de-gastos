@@ -1,7 +1,7 @@
-import { descargarArchivo, formatoNumero } from './utils.js?v=39';
-import { base64ABytes } from './excel.js?v=39';
-import { guardarTexto } from './datos.js?v=39';
-import { guardarArchivo, leerArchivo, borrarArchivo } from './almacen-archivos.js?v=39';
+import { descargarArchivo, formatoNumero } from './utils.js?v=40';
+import { base64ABytes } from './excel.js?v=40';
+import { guardarTexto } from './datos.js?v=40';
+import { guardarArchivo, leerArchivo, borrarArchivo } from './almacen-archivos.js?v=40';
 
 // El registro (nombre, fecha, tamaño...) está en localStorage y el contenido de cada archivo, en IndexedDB.
 // Los archivos antiguos llevaban el contenido en el propio registro: al arrancar se trasladan.

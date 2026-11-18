@@ -3,11 +3,11 @@
 import {
     abrirModalCopia, hayContrasenaGuardada, guardarContrasenaCopia,
     obtenerDiasRecordatorio, fijarDiasRecordatorio, describirUltimaCopia
-} from './copia-seguridad.js?v=39';
-import { formatoNumero } from './utils.js?v=39';
-import { CLAVES_ALMACEN } from './datos.js?v=39';
-import { abrirConfiguracion } from './configuracion.js?v=39';
-import { borrarTodosLosArchivos } from './almacen-archivos.js?v=39';
+} from './copia-seguridad.js?v=40';
+import { formatoNumero } from './utils.js?v=40';
+import { CLAVES_ALMACEN } from './datos.js?v=40';
+import { abrirConfiguracion } from './configuracion.js?v=40';
+import { borrarTodosLosArchivos } from './almacen-archivos.js?v=40';
 
 const TEMAS = ['sistema', 'claro', 'oscuro'];
 const CLAVES_DATOS = [...CLAVES_ALMACEN, 'inversiones', 'carteras', 'valoraciones', 'exportaciones', 'ultimaCopia', 'recordatorioPospuesto',
@@ -34,7 +34,7 @@ export function aplicarTema(tema) {
     // Color de la barra del navegador / del sistema en el móvil
     const fondo = getComputedStyle(document.body).backgroundColor;
     document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
-        if (tema === 'sistema') meta.setAttribute('content', meta.getAttribute('data-original') || meta.getAttribute('content'));
+        if (tema === 'sistema') meta.setAttribute('content', meta.getAttribute('data-original'));
         else meta.setAttribute('content', fondo);
     });
 }
@@ -140,7 +140,6 @@ async function borrarTodo() {
 export function iniciarAjustes(funcionesAyuda) {
     ayudas = funcionesAyuda;
 
-    document.querySelectorAll('meta[name="theme-color"]').forEach(meta => meta.setAttribute('data-original', meta.getAttribute('content')));
     aplicarTema(temaGuardado());
 
     document.querySelectorAll('[data-grupo="tema"] button').forEach(btn => {
