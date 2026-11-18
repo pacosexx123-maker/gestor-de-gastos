@@ -1,4 +1,4 @@
-import { guardarTexto } from './datos.js?v=39';
+import { guardarTexto } from './datos.js?v=40';
 
 // --- FECHAS (siempre en hora local, no UTC) ---
 

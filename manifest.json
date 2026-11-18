@@ -7,7 +7,6 @@
   "display": "standalone",
   "lang": "es",
   "background_color": "#ffffff",
-  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "icono.png?v=3",
