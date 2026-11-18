@@ -1,30 +1,30 @@
 // Arranque de la app: navegación entre pestañas, avisos, ventanas, importar datos
 // y conexión entre los módulos.
 
-import { formatoFechaES } from './utils.js?v=36';
-import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=36';
-import { iniciarExportarExcel, renderizarExportarExcel } from './exportar-excel.js?v=36';
-import { marcarPestana, moverBarra, animarBarra } from './barra-navegacion.js?v=36';
+import { formatoFechaES } from './utils.js?v=37';
+import { iniciarExportaciones, registrarExportacion } from './exportaciones.js?v=37';
+import { iniciarExportarExcel, renderizarExportarExcel } from './exportar-excel.js?v=37';
+import { marcarPestana, moverBarra, animarBarra } from './barra-navegacion.js?v=37';
 import {
     iniciarInversiones, abrirFormularioInversion, obtenerInversiones, reemplazarInversiones,
     anadirInversiones, obtenerHistoricoValor, reemplazarHistoricoValor
-} from './inversiones.js?v=36';
-import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo, leerFilasArchivo, sonOrdenesDeBroker } from './importar-ordenes.js?v=36';
-import { iniciarImportacionBanco, importarBancoDesdeFilas } from './importar-banco.js?v=36';
-import { obtenerReglas, reemplazarReglas } from './reglas.js?v=36';
-import { iniciarCopiaSeguridad, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=36';
-import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=36';
-import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=36';
-import { iniciarAjustes, renderizarAjustes, aplicarTema } from './ajustes.js?v=36';
+} from './inversiones.js?v=37';
+import { iniciarImportacionOrdenes, importarOrdenesDesdeArchivo, leerFilasArchivo, sonOrdenesDeBroker } from './importar-ordenes.js?v=37';
+import { iniciarImportacionBanco, importarBancoDesdeFilas } from './importar-banco.js?v=37';
+import { obtenerReglas, reemplazarReglas } from './reglas.js?v=37';
+import { iniciarCopiaSeguridad, esCopiaCifrada, pedirContrasenaYDescifrar } from './copia-seguridad.js?v=37';
+import { obtenerCarteras, reemplazarCarteras } from './carteras.js?v=37';
+import { obtenerValoraciones, reemplazarValoraciones } from './valoraciones.js?v=37';
+import { iniciarAjustes, renderizarAjustes, aplicarTema } from './ajustes.js?v=37';
 import {
     iniciarGastos, abrirFormularioGasto, obtenerMovimientos, reemplazarMovimientos, anadirMovimientos,
     renombrarCategoriaEnMovimientos, quitarApartadoDeMovimientos,
     obtenerPresupuestos, reemplazarPresupuestos, renderizarGastos
-} from './gastos.js?v=36';
-import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=36';
-import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=36';
-import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=36';
-import { iniciarBloqueo } from './bloqueo.js?v=36';
+} from './gastos.js?v=37';
+import { iniciarConfiguracion, obtenerConfiguracion, reemplazarConfiguracion } from './configuracion.js?v=37';
+import { iniciarRecurrentes, obtenerRecurrentes, reemplazarRecurrentes, renderizarRecurrentes } from './recurrentes.js?v=37';
+import { iniciarResumen, renderizarResumen, obtenerDatosResumen, reemplazarDatosResumen } from './resumen.js?v=37';
+import { iniciarBloqueo } from './bloqueo.js?v=37';
 
 // --- AVISOS (con opción de deshacer) ---
 
